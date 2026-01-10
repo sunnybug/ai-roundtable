@@ -2,6 +2,30 @@
 
 const AI_TYPES = ['claude', 'chatgpt', 'gemini'];
 
+// Cross-reference action prompts
+const CROSS_REF_ACTIONS = {
+  evaluate: {
+    label: '评价',
+    prompt: '请客观评价以下回复的优缺点：'
+  },
+  learn: {
+    label: '借鉴',
+    prompt: '以下回复有哪些值得借鉴和学习的地方？请具体说明：'
+  },
+  critique: {
+    label: '批评',
+    prompt: '请批判性地分析以下回复，指出其中的问题、不足和可能的错误：'
+  },
+  supplement: {
+    label: '补充',
+    prompt: '以下回复有哪些遗漏或可以补充的内容？请详细说明：'
+  },
+  compare: {
+    label: '对比',
+    prompt: '请将以下回复与你自己的观点进行对比分析，说明异同：'
+  }
+};
+
 // DOM Elements
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
@@ -30,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   checkConnectedTabs();
   setupEventListeners();
   setupDiscussionMode();
+  setupCrossRefDropdown();
 });
 
 function setupEventListeners() {
@@ -42,20 +67,6 @@ function setupEventListeners() {
       e.preventDefault();
       handleSend();
     }
-  });
-
-  // Shortcut buttons (/cross, <-)
-  document.querySelectorAll('.shortcut-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const insertText = btn.dataset.insert;
-      const cursorPos = messageInput.selectionStart;
-      const textBefore = messageInput.value.substring(0, cursorPos);
-      const textAfter = messageInput.value.substring(cursorPos);
-
-      messageInput.value = textBefore + insertText + textAfter;
-      messageInput.focus();
-      messageInput.selectionStart = messageInput.selectionEnd = cursorPos + insertText.length;
-    });
   });
 
   // Mention buttons - insert @AI into textarea
@@ -620,6 +631,92 @@ function updateDiscussionStatus(state, text) {
   const statusEl = document.getElementById('discussion-status');
   statusEl.textContent = text;
   statusEl.className = 'discussion-status ' + state;
+}
+
+// ============================================
+// Cross-Reference Dropdown Functions
+// ============================================
+
+function setupCrossRefDropdown() {
+  const crossRefBtn = document.getElementById('cross-ref-btn');
+  const targetSelect = document.getElementById('cross-target');
+  const sourceSelect = document.getElementById('cross-source');
+
+  // Prevent selecting same AI for both target and source
+  targetSelect.addEventListener('change', () => {
+    validateCrossRefSelection();
+  });
+
+  sourceSelect.addEventListener('change', () => {
+    validateCrossRefSelection();
+  });
+
+  crossRefBtn.addEventListener('click', executeCrossRef);
+
+  // Initial validation
+  validateCrossRefSelection();
+}
+
+function validateCrossRefSelection() {
+  const target = document.getElementById('cross-target').value;
+  const source = document.getElementById('cross-source').value;
+  const btn = document.getElementById('cross-ref-btn');
+
+  if (target === source) {
+    btn.disabled = true;
+    btn.textContent = '目标和来源不能相同';
+  } else {
+    btn.disabled = false;
+    btn.textContent = '执行 Cross-Reference';
+  }
+}
+
+async function executeCrossRef() {
+  const target = document.getElementById('cross-target').value;
+  const source = document.getElementById('cross-source').value;
+  const action = document.getElementById('cross-action').value;
+  const btn = document.getElementById('cross-ref-btn');
+
+  if (target === source) {
+    log('目标和来源不能是同一个 AI', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '获取回复中...';
+
+  try {
+    // Get source AI's response
+    const sourceResponse = await getLatestResponse(source);
+
+    if (!sourceResponse) {
+      log(`无法获取 ${source} 的回复`, 'error');
+      return;
+    }
+
+    // Build the prompt
+    const actionConfig = CROSS_REF_ACTIONS[action];
+    const fullMessage = `${actionConfig.prompt}
+
+<${source}_response>
+${sourceResponse}
+</${source}_response>`;
+
+    log(`Cross-Ref: ${capitalize(target)} ${actionConfig.label} ${capitalize(source)}`);
+
+    // Send to target AI
+    await sendToAI(target, fullMessage);
+
+    // Close the details panel after execution
+    document.getElementById('cross-ref-panel').removeAttribute('open');
+
+  } catch (err) {
+    log('Cross-reference 失败: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '执行 Cross-Reference';
+    validateCrossRefSelection();
+  }
 }
 
 function capitalize(str) {

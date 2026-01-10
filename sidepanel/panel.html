@@ -40,10 +40,6 @@
     </section>
 
     <section class="input-section">
-      <div class="shortcut-buttons">
-        <button class="shortcut-btn" id="cross-btn" data-insert="/cross ">/cross</button>
-        <button class="shortcut-btn" id="arrow-btn" data-insert=" <- "><-</button>
-      </div>
       <div class="mention-buttons">
         <span class="mention-label">@</span>
         <button class="mention-btn claude" data-mention="@Claude">Claude</button>
@@ -52,24 +48,49 @@
       </div>
       <textarea
         id="message-input"
-        placeholder="Enter your message...&#10;&#10;Use /cross for cross-reference:&#10;/cross @Claude @Gemini <- @ChatGPT 评价一下"
+        placeholder="Enter your message...&#10;&#10;Use @ buttons to mention specific AIs&#10;Use Cross-Reference panel below for evaluations"
         rows="6"
       ></textarea>
       <button id="send-btn">Send</button>
     </section>
 
-    <section class="help">
-      <details>
-        <summary>Cross-reference syntax</summary>
-        <p class="help-subtitle">两个 AI（自动检测）</p>
-        <ul>
-          <li><code>@Claude 评价一下 @ChatGPT</code><br><small>Claude 评价 ChatGPT（最后@的是来源）</small></li>
-        </ul>
-        <p class="help-subtitle">三个 AI（用 /cross 命令）</p>
-        <ul>
-          <li><code>/cross @Claude @Gemini <- @ChatGPT 评价</code><br><small>两个评价一个</small></li>
-          <li><code>/cross @Claude <- @ChatGPT @Gemini 对比</code><br><small>一个对比两个</small></li>
-        </ul>
+    <section class="cross-ref-section">
+      <details id="cross-ref-panel">
+        <summary>Cross-Reference</summary>
+        <div class="cross-ref-form">
+          <div class="cross-ref-row">
+            <div class="cross-ref-field">
+              <label>目标 (评价者)</label>
+              <select id="cross-target">
+                <option value="claude">Claude</option>
+                <option value="chatgpt">ChatGPT</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </div>
+            <div class="cross-ref-arrow">→</div>
+            <div class="cross-ref-field">
+              <label>来源 (被评价)</label>
+              <select id="cross-source">
+                <option value="chatgpt">ChatGPT</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </div>
+          </div>
+          <div class="cross-ref-row">
+            <div class="cross-ref-field full-width">
+              <label>动作</label>
+              <select id="cross-action">
+                <option value="evaluate">评价 - 客观分析优缺点</option>
+                <option value="learn">借鉴 - 有什么值得学习</option>
+                <option value="critique">批评 - 指出问题和不足</option>
+                <option value="supplement">补充 - 有哪些遗漏</option>
+                <option value="compare">对比 - 和自己观点比较</option>
+              </select>
+            </div>
+          </div>
+          <button id="cross-ref-btn" class="cross-ref-execute">执行 Cross-Reference</button>
+        </div>
       </details>
     </section>
     </div><!-- end normal-mode -->
