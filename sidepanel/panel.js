@@ -217,21 +217,34 @@ async function handleSend() {
 function parseMessage(message) {
   // Check for /cross command first: /cross @targets <- @sources message
   // Use this for complex cases (3 AIs, or when you want to be explicit)
-  const crossCommandPattern = /^\/cross\s+(.+?)\s*<-\s*(.+?)\s+(.+)$/is;
-  const crossMatch = message.match(crossCommandPattern);
+  if (message.trim().toLowerCase().startsWith('/cross ')) {
+    const arrowIndex = message.indexOf('<-');
+    if (arrowIndex === -1) {
+      // No arrow found, treat as regular message
+      return { crossRef: false, mentions: [], originalMessage: message };
+    }
 
-  if (crossMatch) {
-    const targetsPart = crossMatch[1];  // e.g., "@Claude @Gemini"
-    const sourcesPart = crossMatch[2];  // e.g., "@ChatGPT"
-    const actualMessage = crossMatch[3]; // The actual message to send
+    const beforeArrow = message.substring(7, arrowIndex).trim(); // Skip "/cross "
+    const afterArrow = message.substring(arrowIndex + 2).trim();  // Skip "<-"
 
-    // Extract AI names from targets and sources
+    // Extract targets (before arrow)
     const mentionPattern = /@(claude|chatgpt|gemini)/gi;
-    const targetMatches = [...targetsPart.matchAll(mentionPattern)];
-    const sourceMatches = [...sourcesPart.matchAll(mentionPattern)];
-
+    const targetMatches = [...beforeArrow.matchAll(mentionPattern)];
     const targetAIs = [...new Set(targetMatches.map(m => m[1].toLowerCase()))];
+
+    // Extract sources and message (after arrow)
+    // Find all @mentions in afterArrow, sources are all @mentions
+    // Message is everything after the last @mention
+    const sourceMatches = [...afterArrow.matchAll(mentionPattern)];
     const sourceAIs = [...new Set(sourceMatches.map(m => m[1].toLowerCase()))];
+
+    // Find where the actual message starts (after the last @mention)
+    let actualMessage = afterArrow;
+    if (sourceMatches.length > 0) {
+      const lastMatch = sourceMatches[sourceMatches.length - 1];
+      const lastMentionEnd = lastMatch.index + lastMatch[0].length;
+      actualMessage = afterArrow.substring(lastMentionEnd).trim();
+    }
 
     if (targetAIs.length > 0 && sourceAIs.length > 0) {
       return {
