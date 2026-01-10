@@ -219,7 +219,7 @@ function parseMessage(message) {
   // For exactly 2 AIs: use keyword detection (simpler syntax)
   // Last mentioned = source (being evaluated), first = target (doing evaluation)
   if (mentions.length === 2) {
-    const evalKeywords = /评价|看看|怎么样|怎么看|如何|讲的|说的|回答|赞同|同意|分析|认为|观点|看法|意见|evaluate|think of|opinion|review|agree|analysis/i;
+    const evalKeywords = /评价|看看|怎么样|怎么看|如何|讲的|说的|回答|赞同|同意|分析|认为|观点|看法|意见|借鉴|批评|补充|对比|evaluate|think of|opinion|review|agree|analysis|compare|learn from/i;
 
     if (evalKeywords.test(message)) {
       const sourceAI = matches[matches.length - 1][1].toLowerCase();
