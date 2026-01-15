@@ -1,10 +1,19 @@
-# AI 圆桌 v0.1 (MVP)
+# AI 圆桌 (AI Roundtable)
 
 > 让多个 AI 助手围桌讨论，交叉评价，深度协作
 
-**This is an MVP. Features may change. No guaranteed support.**
+**Developer Preview** - 这是开发者抢先版，功能可能变化，不保证向后兼容。
+
+**本地运行，数据不离开你的浏览器** - 无需 API Key，直接操作 AI 网页界面。
+
+**欢迎反馈** - 接受 Issue 和 PR；不承诺长期支持和兼容性。
+
+---
 
 一个 Chrome 扩展，让你像"会议主持人"一样，同时操控多个 AI（Claude、ChatGPT、Gemini），实现真正的 AI 圆桌会议。
+
+<!-- TODO: 添加 GIF 演示 -->
+<!-- ![Demo GIF](assets/demo.gif) -->
 
 ## 核心特性
 
@@ -116,6 +125,27 @@ ai-roundtable/
 └── icons/                  # 扩展图标
 ```
 
+## 隐私说明
+
+- **不上传任何内容** - 扩展完全在本地运行，不向任何服务器发送数据
+- **无遥测/日志采集** - 不收集使用数据、不追踪行为
+- **数据存储位置** - 仅使用浏览器本地存储（chrome.storage.local）
+- **无第三方服务** - 不依赖任何外部 API 或服务
+- **如何删除数据** - 卸载扩展即可完全清除，或在 Chrome 扩展设置中清除存储
+
+## 截图
+
+<!-- TODO: 添加截图 -->
+<!--
+| 安装后界面 | 选择目标模型 |
+|-----------|-------------|
+| ![](assets/screenshot-1.png) | ![](assets/screenshot-2.png) |
+
+| 互评结果 | 无需 API Key |
+|---------|-------------|
+| ![](assets/screenshot-3.png) | ![](assets/screenshot-4.png) |
+-->
+
 ## 常见问题
 
 ### Q: 安装后无法连接 AI 页面？
@@ -126,9 +156,6 @@ ai-roundtable/
 
 ### Q: ChatGPT 回复很长时会超时吗？
 **A:** 不会。系统支持最长 10 分钟的回复捕获。
-
-### Q: 会读取我的 AI 对话内容吗？
-**A:** 扩展仅在本地运行，不会向任何服务器发送数据。
 
 ## 已知限制
 
