@@ -404,6 +404,13 @@ header .subtitle {
   min-height: 0;
 }
 
+.discussion-summary {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* Utility */
 .hidden {
   display: none !important;
@@ -747,7 +754,8 @@ header .subtitle {
   color: var(--text-secondary);
   line-height: 1.6;
   margin-bottom: 12px;
-  max-height: 300px;
+  flex: 1;
+  min-height: 100px;
   overflow-y: auto;
 }
 

@@ -737,6 +737,11 @@ function showSummary(ai1Summary, ai2Summary) {
 
   const [ai1, ai2] = discussionState.participants;
 
+  // Handle empty summaries
+  if (!ai1Summary && !ai2Summary) {
+    log('Warning: No summary content received from AIs', 'error');
+  }
+
   // Build summary HTML - show both summaries side by side conceptually
   let html = `<div class="round-summary">
     <h4>双方总结对比</h4>
