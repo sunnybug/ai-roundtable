@@ -20,13 +20,13 @@ async function setStoredResponse(aiType, content) {
   await chrome.storage.session.set({ latestResponses: responses });
 }
 
+// Set side panel behavior
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
 // Open side panel when extension icon is clicked
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ windowId: tab.windowId });
 });
-
-// Set side panel behavior
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
 // Listen for messages from side panel and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -203,3 +203,4 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   // We'd need to track which tabs were AI tabs to notify properly
   // For now, side panel will re-check on next action
 });
+

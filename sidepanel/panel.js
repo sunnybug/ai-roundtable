@@ -847,7 +847,7 @@ function saveSelectedAIs() {
       selected[aiType] = checkbox.checked;
     }
   });
-  
+
   chrome.storage.local.set({ selectedAIs: selected }, () => {
     if (chrome.runtime.lastError) {
       console.error('[AI Panel] Failed to save selected AIs:', chrome.runtime.lastError);
@@ -880,11 +880,11 @@ async function displayBuildTime() {
     // Read build_time from build-info.json
     const buildInfoUrl = chrome.runtime.getURL('build-info.json');
     const response = await fetch(buildInfoUrl);
-    
+
     if (response.ok) {
       const buildInfo = await response.json();
       const buildTime = buildInfo.build_time;
-      
+
       if (buildTime) {
         // Format the time for display
         const buildDate = new Date(buildTime);
@@ -897,7 +897,7 @@ async function displayBuildTime() {
           second: '2-digit',
           hour12: false
         });
-        
+
         const buildTimeEl = document.getElementById('build-time');
         if (buildTimeEl) {
           buildTimeEl.textContent = formattedTime;
