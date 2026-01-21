@@ -435,6 +435,32 @@
 
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
+      
+      // If we matched .answer-content-wrap or .answer-content, try to find .markdown-body inside first
+      // to avoid including button text (AI编辑, 分享, 重新回答, etc.)
+      if (lastMessage.classList.contains('answer-content-wrap') || 
+          lastMessage.classList.contains('answer-content')) {
+        const markdownBody = lastMessage.querySelector('.markdown-body');
+        if (markdownBody) {
+          const content = markdownBody.innerText.trim();
+          console.log('[AI Panel] ChatGLM response found (from markdown-body), length:', content.length);
+          return content;
+        }
+        // If no markdown-body, exclude interact-container before extracting text
+        const interactContainer = lastMessage.querySelector('.interact-container');
+        if (interactContainer) {
+          // Clone the element to avoid modifying the original DOM
+          const clone = lastMessage.cloneNode(true);
+          const cloneInteract = clone.querySelector('.interact-container');
+          if (cloneInteract) {
+            cloneInteract.remove();
+          }
+          const content = clone.innerText.trim();
+          console.log('[AI Panel] ChatGLM response found (excluded interact-container), length:', content.length);
+          return content;
+        }
+      }
+      
       // Use innerText to preserve line breaks
       const content = lastMessage.innerText.trim();
       console.log('[AI Panel] ChatGLM response found, length:', content.length);
@@ -445,6 +471,34 @@
     const allMessages = document.querySelectorAll('[class*="message"], [class*="response"], .answer-content-wrap');
     if (allMessages.length > 0) {
       const lastMessage = allMessages[allMessages.length - 1];
+      
+      // If it's answer-content-wrap, try to find markdown-body or exclude interact-container
+      if (lastMessage.classList.contains('answer-content-wrap') || 
+          lastMessage.classList.contains('answer-content')) {
+        const markdownBody = lastMessage.querySelector('.markdown-body');
+        if (markdownBody) {
+          const content = markdownBody.innerText.trim();
+          if (content.length > 0) {
+            console.log('[AI Panel] ChatGLM response (fallback, from markdown-body), length:', content.length);
+            return content;
+          }
+        }
+        // Exclude interact-container
+        const interactContainer = lastMessage.querySelector('.interact-container');
+        if (interactContainer) {
+          const clone = lastMessage.cloneNode(true);
+          const cloneInteract = clone.querySelector('.interact-container');
+          if (cloneInteract) {
+            cloneInteract.remove();
+          }
+          const content = clone.innerText.trim();
+          if (content.length > 0) {
+            console.log('[AI Panel] ChatGLM response (fallback, excluded interact-container), length:', content.length);
+            return content;
+          }
+        }
+      }
+      
       const content = lastMessage.innerText.trim();
       if (content.length > 0) {
         console.log('[AI Panel] ChatGLM response (fallback), length:', content.length);
