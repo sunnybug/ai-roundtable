@@ -27,7 +27,7 @@
   // Use a persistent listener to ensure it's always available
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('[AI Panel] ChatGLM received message:', message.type);
-    
+
     if (message.type === 'INJECT_MESSAGE') {
       injectMessage(message.message)
         .then(() => {
@@ -46,14 +46,14 @@
       sendResponse({ content: response });
       return true;
     }
-    
+
     // Return false if message type is not handled
     return false;
   });
 
   // Setup response observer for cross-reference feature
   setupResponseObserver();
-  
+
   // Ensure content script is ready even if page loads dynamically
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -67,78 +67,105 @@
   }
 
   async function injectMessage(text) {
-    // ChatGLM uses various input types - try common selectors
-    const inputSelectors = [
-      'textarea[placeholder*="输入"]',
-      'textarea[placeholder*="请输入"]',
-      'textarea[placeholder*="消息"]',
-      'div[contenteditable="true"]',
-      'textarea[class*="input"]',
-      'textarea[class*="message"]',
-      'textarea'
-    ];
-
-    let inputEl = null;
-    for (const selector of inputSelectors) {
-      inputEl = document.querySelector(selector);
-      if (inputEl && isVisible(inputEl)) break;
+    // Prevent duplicate sending
+    if (isSending) {
+      console.log('[AI Panel] ChatGLM already sending, skipping duplicate request');
+      return false;
     }
+    isSending = true;
 
-    if (!inputEl) {
-      throw new Error('Could not find input field');
-    }
+    try {
+      // ChatGLM uses various input types - try common selectors
+      const inputSelectors = [
+        'textarea[placeholder*="输入"]',
+        'textarea[placeholder*="请输入"]',
+        'textarea[placeholder*="消息"]',
+        'div[contenteditable="true"]',
+        'textarea[class*="input"]',
+        'textarea[class*="message"]',
+        'textarea'
+      ];
 
-    // Focus the input
-    inputEl.focus();
-
-    // Handle different input types
-    if (inputEl.tagName === 'TEXTAREA') {
-      inputEl.value = text;
-      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-      inputEl.dispatchEvent(new Event('change', { bubbles: true }));
-      // Also trigger React/Vue change events
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-      if (nativeInputValueSetter) {
-        nativeInputValueSetter.call(inputEl, text);
-        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+      let inputEl = null;
+      for (const selector of inputSelectors) {
+        inputEl = document.querySelector(selector);
+        if (inputEl && isVisible(inputEl)) break;
       }
-    } else {
-      // Contenteditable div
-      inputEl.textContent = text;
-      inputEl.innerText = text;
-      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-      inputEl.dispatchEvent(new Event('keyup', { bubbles: true }));
+
+      if (!inputEl) {
+        throw new Error('Could not find input field');
+      }
+
+      // Focus the input
+      inputEl.focus();
+
+      // Handle different input types
+      if (inputEl.tagName === 'TEXTAREA') {
+        inputEl.value = text;
+        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        // Also trigger React/Vue change events
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(inputEl, text);
+          inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      } else {
+        // Contenteditable div
+        inputEl.textContent = text;
+        inputEl.innerText = text;
+        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        inputEl.dispatchEvent(new Event('keyup', { bubbles: true }));
+      }
+
+      // Small delay to let the UI process
+      await sleep(200);
+
+      // Find and click the send button
+      const sendButton = findSendButton();
+      if (!sendButton) {
+        throw new Error('Could not find send button. Available elements: ' +
+          Array.from(document.querySelectorAll('div[class*="enter"], button')).map(el => el.className).join(', '));
+      }
+
+      // For div elements (ChatGLM uses div as button), trigger click events
+      if (sendButton.tagName === 'DIV') {
+        // Try to find the actual clickable element inside
+        const clickableEl = sendButton.querySelector('div, img') || sendButton;
+        
+        // ChatGLM's div button may need specific event sequence
+        // Trigger events in sequence to mimic a real click
+        const mouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        const mouseUp = new MouseEvent('mouseup', { bubbles: true, cancelable: true });
+        
+        clickableEl.dispatchEvent(mouseDown);
+        await sleep(20);
+        clickableEl.dispatchEvent(mouseUp);
+        await sleep(20);
+        clickableEl.click();
+      } else {
+        // Regular button
+        await waitForButtonEnabled(sendButton);
+        sendButton.click();
+      }
+
+      // Start capturing response after sending
+      console.log('[AI Panel] ChatGLM message sent, starting response capture...');
+      waitForStreamingComplete();
+
+      return true;
+    } catch (error) {
+      console.error('[AI Panel] ChatGLM injection error:', error);
+      // Reset flag immediately on error
+      isSending = false;
+      throw error;
     }
-
-    // Small delay to let the UI process
-    await sleep(200);
-
-    // Find and click the send button
-    const sendButton = findSendButton();
-    if (!sendButton) {
-      throw new Error('Could not find send button. Available elements: ' + 
-        Array.from(document.querySelectorAll('div[class*="enter"], button')).map(el => el.className).join(', '));
-    }
-
-    // For div elements (ChatGLM uses div as button), we need to trigger click differently
-    if (sendButton.tagName === 'DIV') {
-      // Try to find the actual clickable element inside
-      const clickableEl = sendButton.querySelector('div, img') || sendButton;
-      // Use both click and mousedown/mouseup events
-      clickableEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-      clickableEl.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-      clickableEl.click();
-    } else {
-      // Regular button
-      await waitForButtonEnabled(sendButton);
-      sendButton.click();
-    }
-
-    // Start capturing response after sending
-    console.log('[AI Panel] ChatGLM message sent, starting response capture...');
-    waitForStreamingComplete();
-
-    return true;
+    
+    // Reset sending flag after a short delay to prevent rapid duplicate sends
+    // But allow normal operation after message is sent
+    setTimeout(() => {
+      isSending = false;
+    }, 800);
   }
 
   function findSendButton() {
@@ -255,6 +282,7 @@
 
   let lastCapturedContent = '';
   let isCapturing = false;
+  let isSending = false; // Prevent duplicate message sending
 
   function checkForResponse(node) {
     if (isCapturing) return;
@@ -274,10 +302,10 @@
     for (const selector of responseSelectors) {
       if (node.matches?.(selector) || node.querySelector?.(selector)) {
         // Check if it's actually a ChatGLM response (contains assistant-name with ChatGLM)
-        const assistantName = node.querySelector?.('.assistant-name') || 
+        const assistantName = node.querySelector?.('.assistant-name') ||
                               (node.matches?.('.assistant-name') ? node : null) ||
                               node.closest?.('.answer-content')?.querySelector?.('.assistant-name');
-        
+
         if (assistantName && assistantName.textContent.includes('ChatGLM')) {
           console.log('[AI Panel] ChatGLM detected new response...');
           waitForStreamingComplete();
@@ -397,7 +425,7 @@
           const nearbyAssistant = msg.closest('[class*="answer"]')?.querySelector('.assistant-name');
           return nearbyAssistant && nearbyAssistant.textContent.includes('ChatGLM');
         });
-        
+
         if (chatglmMessages.length > 0) {
           messages = chatglmMessages;
           break;
