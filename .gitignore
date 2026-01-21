@@ -20,3 +20,4 @@ package-lock.json
 
 # Build artifacts
 *.zip
+build-info.json

@@ -11,19 +11,21 @@ trap {
 
 $buildInfoPath = Join-Path $PSScriptRoot "build-info.json"
 
-if (-not (Test-Path $buildInfoPath)) {
-    Write-Host "错误: 找不到 build-info.json 文件" -ForegroundColor Red
-    exit 1
-}
-
 # 获取当前时间
 $currentTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-# 读取并解析 JSON
-$buildInfo = Get-Content $buildInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json
-
-# 更新 build_time
-$buildInfo.build_time = $currentTime
+if (-not (Test-Path $buildInfoPath)) {
+    Write-Host "build-info.json 文件不存在，正在自动生成..." -ForegroundColor Yellow
+    # 创建新的 JSON 对象
+    $buildInfo = @{
+        build_time = $currentTime
+    }
+} else {
+    # 读取并解析 JSON
+    $buildInfo = Get-Content $buildInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    # 更新 build_time
+    $buildInfo.build_time = $currentTime
+}
 
 # 保存文件
 $buildInfo | ConvertTo-Json -Compress | Set-Content $buildInfoPath -Encoding UTF8 -NoNewline
