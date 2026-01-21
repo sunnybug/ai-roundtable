@@ -1,6 +1,6 @@
 // AI Panel - Side Panel Controller
 
-const AI_TYPES = ['claude', 'chatgpt', 'gemini', 'chatglm'];
+const AI_TYPES = ['claude', 'chatgpt', 'gemini', 'chatglm', 'aistudio'];
 
 // Cross-reference action keywords (inserted into message)
 const CROSS_REF_ACTIONS = {
@@ -21,7 +21,8 @@ const connectedTabs = {
   claude: null,
   chatgpt: null,
   gemini: null,
-  chatglm: null
+  chatglm: null,
+  aistudio: null
 };
 
 // Discussion Mode State
@@ -163,6 +164,7 @@ function getAITypeFromUrl(url) {
   if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) return 'chatgpt';
   if (url.includes('gemini.google.com')) return 'gemini';
   if (url.includes('chatglm.cn')) return 'chatglm';
+  if (url.includes('aistudio.google.com')) return 'aistudio';
   return null;
 }
 
@@ -265,7 +267,7 @@ function parseMessage(message) {
     const afterArrow = message.substring(arrowIndex + 2).trim();  // Skip "<-"
 
     // Extract targets (before arrow)
-    const mentionPattern = /@(claude|chatgpt|gemini|chatglm)/gi;
+    const mentionPattern = /@(claude|chatgpt|gemini|chatglm|aistudio)/gi;
     const targetMatches = [...beforeArrow.matchAll(mentionPattern)];
     const targetAIs = [...new Set(targetMatches.map(m => m[1].toLowerCase()))];
 
@@ -295,7 +297,7 @@ function parseMessage(message) {
   }
 
   // Pattern-based detection for @ mentions
-  const mentionPattern = /@(claude|chatgpt|gemini|chatglm)/gi;
+  const mentionPattern = /@(claude|chatgpt|gemini|chatglm|aistudio)/gi;
   const matches = [...message.matchAll(mentionPattern)];
   const mentions = [...new Set(matches.map(m => m[1].toLowerCase()))];
 

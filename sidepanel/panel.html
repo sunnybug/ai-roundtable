@@ -42,6 +42,11 @@
         <span class="target-name chatglm">ChatGLM</span>
         <span class="status" id="status-chatglm">-</span>
       </label>
+      <label class="target-label">
+        <input type="checkbox" id="target-aistudio" checked>
+        <span class="target-name aistudio">AI Studio</span>
+        <span class="status" id="status-aistudio">-</span>
+      </label>
     </section>
 
     <section class="input-section">
@@ -64,6 +69,7 @@
         <button class="mention-btn chatgpt" data-mention="@ChatGPT">ChatGPT</button>
         <button class="mention-btn gemini" data-mention="@Gemini">Gemini</button>
         <button class="mention-btn chatglm" data-mention="@ChatGLM">ChatGLM</button>
+        <button class="mention-btn aistudio" data-mention="@AIStudio">AI Studio</button>
       </div>
       <textarea
         id="message-input"
@@ -112,6 +118,10 @@
             <label class="participant-option">
               <input type="checkbox" name="participant" value="chatglm">
               <span class="target-name chatglm">ChatGLM</span>
+            </label>
+            <label class="participant-option">
+              <input type="checkbox" name="participant" value="aistudio">
+              <span class="target-name aistudio">AI Studio</span>
             </label>
           </div>
           <p class="hint">请选择 2 位参与者</p>

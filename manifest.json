@@ -17,7 +17,8 @@
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
     "https://gemini.google.com/*",
-    "https://chatglm.cn/*"
+    "https://chatglm.cn/*",
+    "https://aistudio.google.com/*"
   ],
 
   "side_panel": {
@@ -47,6 +48,11 @@
     {
       "matches": ["https://chatglm.cn/*"],
       "js": ["content/chatglm.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://aistudio.google.com/*"],
+      "js": ["content/aistudio.js"],
       "run_at": "document_idle"
     }
   ],
