@@ -4,13 +4,14 @@
 const AI_URL_PATTERNS = {
   claude: ['claude.ai'],
   chatgpt: ['chat.openai.com', 'chatgpt.com'],
-  gemini: ['gemini.google.com']
+  gemini: ['gemini.google.com'],
+  chatglm: ['chatglm.cn']
 };
 
 // Store latest responses using chrome.storage.session (persists across service worker restarts)
 async function getStoredResponses() {
   const result = await chrome.storage.session.get('latestResponses');
-  return result.latestResponses || { claude: null, chatgpt: null, gemini: null };
+  return result.latestResponses || { claude: null, chatgpt: null, gemini: null, chatglm: null };
 }
 
 async function setStoredResponse(aiType, content) {
@@ -94,22 +95,63 @@ async function sendMessageToAI(aiType, message) {
       return { success: false, error: `No ${aiType} tab found` };
     }
 
-    // Send message to content script
-    const response = await chrome.tabs.sendMessage(tab.id, {
-      type: 'INJECT_MESSAGE',
-      message
-    });
+    // Try to inject content script if it's not loaded yet
+    // This helps with SPA pages that might not have the script loaded
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: [`content/${aiType}.js`]
+      });
+      // Wait a bit for the script to initialize
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (injectErr) {
+      // Script might already be injected, or page doesn't match
+      console.log(`[AI Panel] Content script injection attempt: ${injectErr.message}`);
+    }
 
-    // Notify side panel
+    // Send message to content script with retry
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          type: 'INJECT_MESSAGE',
+          message
+        });
+
+        // Notify side panel
+        notifySidePanel('SEND_RESULT', {
+          aiType,
+          success: response?.success,
+          error: response?.error
+        });
+
+        return response;
+      } catch (err) {
+        lastError = err;
+        // If it's a connection error, wait and retry
+        if (err.message.includes('Receiving end does not exist') && attempt < 2) {
+          console.log(`[AI Panel] Retry ${attempt + 1}/3 for ${aiType}...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    // If all retries failed
+    throw lastError;
+  } catch (err) {
+    const errorMsg = err.message || 'Unknown error';
+    console.error(`[AI Panel] Failed to send to ${aiType}:`, errorMsg);
+    
+    // Notify side panel of failure
     notifySidePanel('SEND_RESULT', {
       aiType,
-      success: response?.success,
-      error: response?.error
+      success: false,
+      error: errorMsg
     });
-
-    return response;
-  } catch (err) {
-    return { success: false, error: err.message };
+    
+    return { success: false, error: errorMsg };
   }
 }
 

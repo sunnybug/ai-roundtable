@@ -14,8 +14,14 @@ SOFTWARE_DESIGN.md
 *.swp
 *.swo
 
-# Node (if added later)
+# Node
 node_modules/
+package-lock.json
 
 # Build artifacts
 *.zip
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/

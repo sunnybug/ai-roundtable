@@ -37,6 +37,11 @@
         <span class="target-name gemini">Gemini</span>
         <span class="status" id="status-gemini">-</span>
       </label>
+      <label class="target-label">
+        <input type="checkbox" id="target-chatglm" checked>
+        <span class="target-name chatglm">ChatGLM</span>
+        <span class="status" id="status-chatglm">-</span>
+      </label>
     </section>
 
     <section class="input-section">
@@ -58,6 +63,7 @@
         <button class="mention-btn claude" data-mention="@Claude">Claude</button>
         <button class="mention-btn chatgpt" data-mention="@ChatGPT">ChatGPT</button>
         <button class="mention-btn gemini" data-mention="@Gemini">Gemini</button>
+        <button class="mention-btn chatglm" data-mention="@ChatGLM">ChatGLM</button>
       </div>
       <textarea
         id="message-input"
@@ -102,6 +108,10 @@
             <label class="participant-option">
               <input type="checkbox" name="participant" value="gemini">
               <span class="target-name gemini">Gemini</span>
+            </label>
+            <label class="participant-option">
+              <input type="checkbox" name="participant" value="chatglm">
+              <span class="target-name chatglm">ChatGLM</span>
             </label>
           </div>
           <p class="hint">请选择 2 位参与者</p>
@@ -155,7 +165,11 @@
     </section>
 
     <footer class="copyright">
-      © AXTONLIU™ & AI 精英学院™
+      <div>© AXTONLIU™ & AI 精英学院™</div>
+      <div class="build-info" id="build-info">
+        <span class="build-label">最后更新：</span>
+        <span class="build-time" id="build-time">-</span>
+      </div>
     </footer>
   </div>
 

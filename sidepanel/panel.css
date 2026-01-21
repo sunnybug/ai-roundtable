@@ -108,6 +108,10 @@ header .subtitle {
   color: #3b82f6;
 }
 
+.target-name.chatglm {
+  color: #8b5cf6;
+}
+
 .status {
   font-size: 11px;
   padding: 2px 6px;
@@ -227,6 +231,14 @@ header .subtitle {
 .mention-btn.gemini:hover {
   background: rgba(59, 130, 246, 0.15);
   border-color: #3b82f6;
+}
+
+.mention-btn.chatglm {
+  color: #8b5cf6;
+}
+.mention-btn.chatglm:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #8b5cf6;
 }
 
 #message-input {
@@ -806,6 +818,7 @@ header .subtitle {
 #summary-content .ai-name.claude { color: #d97706; }
 #summary-content .ai-name.chatgpt { color: #10b981; }
 #summary-content .ai-name.gemini { color: #3b82f6; }
+#summary-content .ai-name.chatglm { color: #8b5cf6; }
 
 #new-discussion-btn {
   width: 100%;
@@ -835,6 +848,29 @@ header .subtitle {
   border-top: 1px solid var(--border-subtle);
   margin-top: auto;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.copyright > div {
+  line-height: 1.4;
+}
+
+.build-info {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.build-label {
+  margin-right: 4px;
+}
+
+.build-time {
+  font-family: 'Monaco', 'Consolas', monospace;
+  color: var(--electric-cyan);
+  opacity: 0.9;
 }
 
 .copyright a {

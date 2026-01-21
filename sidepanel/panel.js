@@ -1,6 +1,6 @@
 // AI Panel - Side Panel Controller
 
-const AI_TYPES = ['claude', 'chatgpt', 'gemini'];
+const AI_TYPES = ['claude', 'chatgpt', 'gemini', 'chatglm'];
 
 // Cross-reference action keywords (inserted into message)
 const CROSS_REF_ACTIONS = {
@@ -20,7 +20,8 @@ const logContainer = document.getElementById('log-container');
 const connectedTabs = {
   claude: null,
   chatgpt: null,
-  gemini: null
+  gemini: null,
+  chatglm: null
 };
 
 // Discussion Mode State
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   checkConnectedTabs();
   setupEventListeners();
   setupDiscussionMode();
+  displayBuildTime();
 });
 
 function setupEventListeners() {
@@ -151,6 +153,7 @@ function getAITypeFromUrl(url) {
   if (url.includes('claude.ai')) return 'claude';
   if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) return 'chatgpt';
   if (url.includes('gemini.google.com')) return 'gemini';
+  if (url.includes('chatglm.cn')) return 'chatglm';
   return null;
 }
 
@@ -253,7 +256,7 @@ function parseMessage(message) {
     const afterArrow = message.substring(arrowIndex + 2).trim();  // Skip "<-"
 
     // Extract targets (before arrow)
-    const mentionPattern = /@(claude|chatgpt|gemini)/gi;
+    const mentionPattern = /@(claude|chatgpt|gemini|chatglm)/gi;
     const targetMatches = [...beforeArrow.matchAll(mentionPattern)];
     const targetAIs = [...new Set(targetMatches.map(m => m[1].toLowerCase()))];
 
@@ -283,7 +286,7 @@ function parseMessage(message) {
   }
 
   // Pattern-based detection for @ mentions
-  const mentionPattern = /@(claude|chatgpt|gemini)/gi;
+  const mentionPattern = /@(claude|chatgpt|gemini|chatglm)/gi;
   const matches = [...message.matchAll(mentionPattern)];
   const mentions = [...new Set(matches.map(m => m[1].toLowerCase()))];
 
@@ -821,4 +824,54 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ============================================
+// Build Time Display
+// ============================================
+
+async function displayBuildTime() {
+  try {
+    // Read build_time from build-info.json
+    const buildInfoUrl = chrome.runtime.getURL('build-info.json');
+    const response = await fetch(buildInfoUrl);
+    
+    if (response.ok) {
+      const buildInfo = await response.json();
+      const buildTime = buildInfo.build_time;
+      
+      if (buildTime) {
+        // Format the time for display
+        const buildDate = new Date(buildTime);
+        const formattedTime = buildDate.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        
+        const buildTimeEl = document.getElementById('build-time');
+        if (buildTimeEl) {
+          buildTimeEl.textContent = formattedTime;
+        }
+      } else {
+        // Fallback if build_time is not set
+        const buildTimeEl = document.getElementById('build-time');
+        if (buildTimeEl) {
+          buildTimeEl.textContent = '未知';
+        }
+      }
+    } else {
+      throw new Error('Failed to load build-info.json');
+    }
+  } catch (err) {
+    console.error('[AI Panel] Failed to display build time:', err);
+    const buildTimeEl = document.getElementById('build-time');
+    if (buildTimeEl) {
+      buildTimeEl.textContent = '加载失败';
+    }
+  }
 }

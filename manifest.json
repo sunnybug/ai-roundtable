@@ -16,7 +16,8 @@
     "https://claude.ai/*",
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
-    "https://gemini.google.com/*"
+    "https://gemini.google.com/*",
+    "https://chatglm.cn/*"
   ],
 
   "side_panel": {
@@ -42,6 +43,11 @@
       "matches": ["https://gemini.google.com/*"],
       "js": ["content/gemini.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chatglm.cn/*"],
+      "js": ["content/chatglm.js"],
+      "run_at": "document_idle"
     }
   ],
 
@@ -54,5 +60,12 @@
 
   "action": {
     "default_title": "打开 AI 圆桌"
-  }
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["build-info.json"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
