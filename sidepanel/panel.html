@@ -9,8 +9,13 @@
 <body>
   <div class="container">
     <header>
-      <h1>AI 圆桌</h1>
-      <p class="subtitle">Multi-AI Roundtable</p>
+      <div class="header-content">
+        <div>
+          <h1>AI 圆桌</h1>
+          <p class="subtitle">Multi-AI Roundtable</p>
+        </div>
+        <button class="settings-btn" id="settings-btn" title="设置">⚙️</button>
+      </div>
     </header>
 
     <!-- Mode Switcher -->
@@ -168,6 +173,48 @@
         <button id="new-discussion-btn">新讨论</button>
       </section>
     </div><!-- end discussion-mode -->
+
+    <!-- Settings Modal -->
+    <div class="settings-modal hidden" id="settings-modal">
+      <div class="settings-overlay"></div>
+      <div class="settings-content">
+        <div class="settings-header">
+          <h2>设置</h2>
+          <button class="settings-close" id="settings-close">×</button>
+        </div>
+        <div class="settings-body">
+          <div class="settings-section">
+            <h3>显示 AI</h3>
+            <p class="settings-hint">选择要在界面中显示的 AI 助手</p>
+            <div class="settings-ai-list">
+              <label class="settings-ai-item">
+                <input type="checkbox" name="visible-ai" value="claude" checked>
+                <span class="target-name claude">Claude</span>
+              </label>
+              <label class="settings-ai-item">
+                <input type="checkbox" name="visible-ai" value="chatgpt" checked>
+                <span class="target-name chatgpt">ChatGPT</span>
+              </label>
+              <label class="settings-ai-item">
+                <input type="checkbox" name="visible-ai" value="gemini" checked>
+                <span class="target-name gemini">Gemini</span>
+              </label>
+              <label class="settings-ai-item">
+                <input type="checkbox" name="visible-ai" value="chatglm" checked>
+                <span class="target-name chatglm">ChatGLM</span>
+              </label>
+              <label class="settings-ai-item">
+                <input type="checkbox" name="visible-ai" value="aistudio" checked>
+                <span class="target-name aistudio">AI Studio</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="settings-footer">
+          <button class="settings-save-btn" id="settings-save-btn">保存</button>
+        </div>
+      </div>
+    </div>
 
     <section class="log">
       <h3>活动日志</h3>

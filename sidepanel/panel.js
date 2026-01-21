@@ -25,6 +25,15 @@ const connectedTabs = {
   aistudio: null
 };
 
+// Cache for visible AIs
+let visibleAIsCache = {
+  claude: true,
+  chatgpt: true,
+  gemini: true,
+  chatglm: true,
+  aistudio: true
+};
+
 // Discussion Mode State
 let discussionState = {
   active: false,
@@ -42,8 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
   checkConnectedTabs();
   setupEventListeners();
   setupDiscussionMode();
+  setupSettings();
   displayBuildTime();
   restoreSelectedAIs();
+  loadAndApplyVisibleAIs();
 });
 
 function setupEventListeners() {
@@ -496,9 +507,23 @@ function switchMode(mode) {
   }
 }
 
-function autoSelectConnectedAIs() {
-  // 获取所有连接的AI
-  const connectedAIs = AI_TYPES.filter(aiType => connectedTabs[aiType]);
+async function autoSelectConnectedAIs() {
+  // 加载可见AI设置
+  try {
+    const result = await chrome.storage.local.get(['visibleAIs']);
+    if (result.visibleAIs) {
+      visibleAIsCache = result.visibleAIs;
+    }
+  } catch (err) {
+    console.error('[AI Panel] Failed to load visible AIs:', err);
+  }
+
+  // 获取所有连接的且可见的AI
+  const connectedAIs = AI_TYPES.filter(aiType => {
+    const isConnected = connectedTabs[aiType];
+    const isVisible = visibleAIsCache[aiType] !== false;
+    return isConnected && isVisible;
+  });
   
   if (connectedAIs.length === 0) {
     // 如果没有连接的AI，取消所有选择
@@ -906,6 +931,156 @@ async function restoreSelectedAIs() {
   } catch (err) {
     console.error('[AI Panel] Failed to restore selected AIs:', err);
   }
+}
+
+// ============================================
+// Settings Functions
+// ============================================
+
+function setupSettings() {
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsModal = document.getElementById('settings-modal');
+  const settingsClose = document.getElementById('settings-close');
+  const settingsSaveBtn = document.getElementById('settings-save-btn');
+  const settingsOverlay = document.querySelector('.settings-overlay');
+
+  // Open settings
+  settingsBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('hidden');
+    loadVisibleAIsToSettings();
+  });
+
+  // Close settings
+  settingsClose.addEventListener('click', closeSettings);
+  settingsOverlay.addEventListener('click', closeSettings);
+
+  // Save settings
+  settingsSaveBtn.addEventListener('click', saveVisibleAIs);
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
+      closeSettings();
+    }
+  });
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.add('hidden');
+}
+
+async function loadVisibleAIsToSettings() {
+  try {
+    const result = await chrome.storage.local.get(['visibleAIs']);
+    const visibleAIs = result.visibleAIs || {
+      claude: true,
+      chatgpt: true,
+      gemini: true,
+      chatglm: true,
+      aistudio: true
+    };
+
+    // Update checkboxes in settings
+    AI_TYPES.forEach(aiType => {
+      const checkbox = document.querySelector(`input[name="visible-ai"][value="${aiType}"]`);
+      if (checkbox) {
+        checkbox.checked = visibleAIs[aiType] !== false; // Default to true if not set
+      }
+    });
+  } catch (err) {
+    console.error('[AI Panel] Failed to load visible AIs:', err);
+  }
+}
+
+async function saveVisibleAIs() {
+  try {
+    const visibleAIs = {};
+    const checkboxes = document.querySelectorAll('input[name="visible-ai"]');
+    
+    checkboxes.forEach(checkbox => {
+      visibleAIs[checkbox.value] = checkbox.checked;
+    });
+
+    // Ensure at least one AI is visible
+    const hasVisible = Object.values(visibleAIs).some(v => v);
+    if (!hasVisible) {
+      log('至少需要显示一个 AI', 'error');
+      return;
+    }
+
+    await chrome.storage.local.set({ visibleAIs });
+    visibleAIsCache = visibleAIs;
+    log('设置已保存', 'success');
+    
+    // Apply settings immediately
+    applyVisibleAIs(visibleAIs);
+    
+    // Close settings modal
+    closeSettings();
+  } catch (err) {
+    console.error('[AI Panel] Failed to save visible AIs:', err);
+    log('保存设置失败: ' + err.message, 'error');
+  }
+}
+
+async function loadAndApplyVisibleAIs() {
+  try {
+    const result = await chrome.storage.local.get(['visibleAIs']);
+    const visibleAIs = result.visibleAIs || {
+      claude: true,
+      chatgpt: true,
+      gemini: true,
+      chatglm: true,
+      aistudio: true
+    };
+    visibleAIsCache = visibleAIs;
+    applyVisibleAIs(visibleAIs);
+  } catch (err) {
+    console.error('[AI Panel] Failed to load visible AIs:', err);
+  }
+}
+
+function applyVisibleAIs(visibleAIs) {
+  AI_TYPES.forEach(aiType => {
+    const isVisible = visibleAIs[aiType] !== false; // Default to true if not set
+    
+    // Hide/show in normal mode targets (label wraps the input)
+    const checkbox = document.getElementById(`target-${aiType}`);
+    if (checkbox) {
+      const targetLabel = checkbox.closest('.target-label');
+      if (targetLabel) {
+        targetLabel.style.display = isVisible ? '' : 'none';
+      }
+    }
+
+    // Hide/show in mention buttons
+    const mentionBtn = document.querySelector(`.mention-btn.${aiType}`);
+    if (mentionBtn) {
+      mentionBtn.style.display = isVisible ? '' : 'none';
+    }
+
+    // Hide/show in discussion mode participants
+    const participantOption = document.querySelector(`input[name="participant"][value="${aiType}"]`);
+    if (participantOption) {
+      const participantLabel = participantOption.closest('.participant-option');
+      if (participantLabel) {
+        participantLabel.style.display = isVisible ? '' : 'none';
+      }
+    }
+
+    // If AI is hidden and currently selected, uncheck it
+    if (!isVisible) {
+      if (checkbox && checkbox.checked) {
+        checkbox.checked = false;
+        saveSelectedAIs();
+      }
+      
+      if (participantOption && participantOption.checked) {
+        participantOption.checked = false;
+        validateParticipants();
+      }
+    }
+  });
 }
 
 // ============================================
