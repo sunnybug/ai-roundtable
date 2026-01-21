@@ -2,15 +2,6 @@
 
 const AI_TYPES = ['claude', 'chatgpt', 'gemini', 'chatglm', 'aistudio'];
 
-// Cross-reference action keywords (inserted into message)
-const CROSS_REF_ACTIONS = {
-  evaluate: { prompt: '评价一下' },
-  learn: { prompt: '有什么值得借鉴的' },
-  critique: { prompt: '批评一下，指出问题' },
-  supplement: { prompt: '有什么遗漏需要补充' },
-  compare: { prompt: '对比一下你的观点' }
-};
-
 // DOM Elements
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
@@ -104,30 +95,6 @@ function setupEventListeners() {
       messageInput.focus();
       messageInput.selectionStart = messageInput.selectionEnd = cursorPos + insertText.length;
     });
-  });
-
-  // Action select - insert action prompt into textarea
-  document.getElementById('action-select').addEventListener('change', (e) => {
-    const action = e.target.value;
-    if (!action) return;
-
-    const actionConfig = CROSS_REF_ACTIONS[action];
-    if (actionConfig) {
-      const cursorPos = messageInput.selectionStart;
-      const textBefore = messageInput.value.substring(0, cursorPos);
-      const textAfter = messageInput.value.substring(cursorPos);
-
-      // Add space before if needed
-      const needsSpace = textBefore.length > 0 && !textBefore.endsWith(' ') && !textBefore.endsWith('\n');
-      const insertText = (needsSpace ? ' ' : '') + actionConfig.prompt + ' ';
-
-      messageInput.value = textBefore + insertText + textAfter;
-      messageInput.focus();
-      messageInput.selectionStart = messageInput.selectionEnd = cursorPos + insertText.length;
-    }
-
-    // Reset select to placeholder
-    e.target.value = '';
   });
 
   // Mention buttons - insert @AI into textarea

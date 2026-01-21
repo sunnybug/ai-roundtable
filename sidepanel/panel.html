@@ -93,15 +93,6 @@
 
     <section class="input-section">
       <div class="action-buttons">
-        <select id="action-select" class="action-select">
-          <option value="">插入动作...</option>
-          <option value="evaluate">评价</option>
-          <option value="learn">借鉴</option>
-          <option value="critique">批评</option>
-          <option value="supplement">补充</option>
-          <option value="compare">对比</option>
-        </select>
-        <button class="shortcut-btn" id="mutual-btn" data-insert="/mutual ">/mutual</button>
         <button class="shortcut-btn" id="cross-btn" data-insert="/cross ">/cross</button>
         <button class="shortcut-btn" id="arrow-btn" data-insert=" <- "><-</button>
       </div>
@@ -115,7 +106,7 @@
       </div>
       <textarea
         id="message-input"
-        placeholder="输入消息...&#10;&#10;互评: /mutual（基于当前回复）&#10;单向: @Claude 评价一下 @ChatGPT"
+        placeholder="输入消息...&#10;&#10;单向: @Claude 评价一下 @ChatGPT"
         rows="6"
       ></textarea>
       <button id="send-btn">发送</button>
@@ -124,11 +115,6 @@
     <section class="help">
       <details>
         <summary>命令帮助</summary>
-        <p class="help-subtitle">互评 /mutual（推荐）</p>
-        <ul>
-          <li><code>/mutual</code><br><small>让所有选中的 AI 互评当前回复</small></li>
-          <li><code>/mutual 重点分析优缺点</code><br><small>可加自定义评价提示</small></li>
-        </ul>
         <p class="help-subtitle">单向引用</p>
         <ul>
           <li><code>@Claude 评价一下 @ChatGPT</code></li>
