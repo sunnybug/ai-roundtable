@@ -190,18 +190,46 @@ async function notifySidePanel(type, data) {
 }
 
 // Track tab updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    const aiType = getAITypeFromUrl(tab.url);
-    if (aiType) {
-      notifySidePanel('TAB_STATUS_UPDATE', { aiType, connected: true });
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // 当URL变化或页面加载完成时，更新连接状态
+  if (changeInfo.url || (changeInfo.status === 'complete' && tab.url)) {
+    // 检查所有AI标签页的连接状态
+    const tabs = await chrome.tabs.query({});
+    const connectedAIs = new Set();
+    
+    for (const t of tabs) {
+      const aiType = getAITypeFromUrl(t.url);
+      if (aiType) {
+        connectedAIs.add(aiType);
+      }
+    }
+    
+    // 通知所有AI类型的连接状态
+    for (const aiType of Object.keys(AI_URL_PATTERNS)) {
+      const isConnected = connectedAIs.has(aiType);
+      notifySidePanel('TAB_STATUS_UPDATE', { aiType, connected: isConnected });
     }
   }
 });
 
 // Track tab closures
-chrome.tabs.onRemoved.addListener((tabId) => {
-  // We'd need to track which tabs were AI tabs to notify properly
-  // For now, side panel will re-check on next action
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  // 检查被关闭的标签页是否是AI标签页，并通知侧边栏更新
+  // 由于标签页已关闭，我们需要通过检查所有剩余标签页来更新状态
+  const tabs = await chrome.tabs.query({});
+  const connectedAIs = new Set();
+  
+  for (const tab of tabs) {
+    const aiType = getAITypeFromUrl(tab.url);
+    if (aiType) {
+      connectedAIs.add(aiType);
+    }
+  }
+  
+  // 通知所有AI类型的连接状态
+  for (const aiType of Object.keys(AI_URL_PATTERNS)) {
+    const isConnected = connectedAIs.has(aiType);
+    notifySidePanel('TAB_STATUS_UPDATE', { aiType, connected: isConnected });
+  }
 });
 

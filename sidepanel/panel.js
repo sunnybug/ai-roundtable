@@ -55,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
   displayBuildTime();
   restoreSelectedAIs();
   loadAndApplyVisibleAIs();
+  // 启动定时刷新连接状态
+  startConnectionRefresh();
 });
 
 function setupEventListeners() {
@@ -137,6 +139,8 @@ function setupEventListeners() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'TAB_STATUS_UPDATE') {
       updateTabStatus(message.aiType, message.connected);
+      // 连接状态变化时更新@按钮
+      updateMentionButtons();
     } else if (message.type === 'RESPONSE_CAPTURED') {
       log(`${message.aiType}: Response captured`, 'success');
       // Handle discussion mode response
@@ -156,14 +160,35 @@ function setupEventListeners() {
 async function checkConnectedTabs() {
   try {
     const tabs = await chrome.tabs.query({});
+    
+    // 重置所有连接状态
+    const newConnectedState = {
+      claude: null,
+      chatgpt: null,
+      gemini: null,
+      chatglm: null,
+      aistudio: null
+    };
 
     for (const tab of tabs) {
       const aiType = getAITypeFromUrl(tab.url);
       if (aiType) {
+        newConnectedState[aiType] = tab.id;
         connectedTabs[aiType] = tab.id;
         updateTabStatus(aiType, true);
       }
     }
+    
+    // 更新未连接的AI状态
+    for (const aiType of AI_TYPES) {
+      if (!newConnectedState[aiType]) {
+        connectedTabs[aiType] = null;
+        updateTabStatus(aiType, false);
+      }
+    }
+    
+    // 更新@按钮显示
+    updateMentionButtons();
   } catch (err) {
     log('Error checking tabs: ' + err.message, 'error');
   }
@@ -187,6 +212,8 @@ function updateTabStatus(aiType, connected) {
   }
   if (connected) {
     connectedTabs[aiType] = true;
+  } else {
+    connectedTabs[aiType] = null;
   }
 }
 
@@ -1053,11 +1080,8 @@ function applyVisibleAIs(visibleAIs) {
       }
     }
 
-    // Hide/show in mention buttons
-    const mentionBtn = document.querySelector(`.mention-btn.${aiType}`);
-    if (mentionBtn) {
-      mentionBtn.style.display = isVisible ? '' : 'none';
-    }
+    // Hide/show in mention buttons (will be updated by updateMentionButtons)
+    // Don't update here, let updateMentionButtons handle it based on connection status
 
     // Hide/show in discussion mode participants
     const participantOption = document.querySelector(`input[name="participant"][value="${aiType}"]`);
@@ -1079,6 +1103,45 @@ function applyVisibleAIs(visibleAIs) {
         participantOption.checked = false;
         validateParticipants();
       }
+    }
+  });
+  
+  // 更新@按钮显示（考虑连接状态和可见性）
+  updateMentionButtons();
+}
+
+// 更新@按钮显示：只显示已连接且可见的AI
+function updateMentionButtons() {
+  AI_TYPES.forEach(aiType => {
+    const mentionBtn = document.querySelector(`.mention-btn.${aiType}`);
+    if (mentionBtn) {
+      const isConnected = connectedTabs[aiType] !== null;
+      const isVisible = visibleAIsCache[aiType] !== false;
+      // 只显示已连接且可见的AI
+      mentionBtn.style.display = (isConnected && isVisible) ? '' : 'none';
+    }
+  });
+}
+
+// ============================================
+// Connection Refresh
+// ============================================
+
+let connectionRefreshInterval = null;
+
+function startConnectionRefresh() {
+  // 立即检查一次
+  checkConnectedTabs();
+  
+  // 每3秒刷新一次连接状态
+  connectionRefreshInterval = setInterval(() => {
+    checkConnectedTabs();
+  }, 3000);
+  
+  // 当页面可见性变化时也检查（用户切换回标签页时）
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkConnectedTabs();
     }
   });
 }
