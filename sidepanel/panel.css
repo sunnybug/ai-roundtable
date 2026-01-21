@@ -163,6 +163,240 @@ header .subtitle {
   color: #f87171;
 }
 
+.response-indicator {
+  font-size: 12px;
+  color: #10b981;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-weight: bold;
+}
+
+.response-indicator.has-response {
+  opacity: 1;
+}
+
+/* Mutual Review Section */
+.mutual-review-section {
+  background: var(--dark-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+
+.mutual-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mutual-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mutual-icon {
+  font-size: 16px;
+}
+
+.mutual-review-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.mutual-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.mutual-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--electric-cyan);
+}
+
+.mutual-toggle-btn.expanded {
+  transform: rotate(180deg);
+}
+
+.mutual-review-content {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.mutual-participants {
+  margin-bottom: 12px;
+}
+
+.mutual-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.mutual-participants-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mutual-participant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(74, 250, 255, 0.1);
+  border: 1px solid rgba(74, 250, 255, 0.3);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mutual-participant-badge.claude {
+  color: #d97706;
+  border-color: rgba(217, 119, 6, 0.3);
+  background: rgba(217, 119, 6, 0.1);
+}
+
+.mutual-participant-badge.chatgpt {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.mutual-participant-badge.gemini {
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.mutual-participant-badge.chatglm {
+  color: #8b5cf6;
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.mutual-participant-badge.aistudio {
+  color: #4285f4;
+  border-color: rgba(66, 133, 244, 0.3);
+  background: rgba(66, 133, 244, 0.1);
+}
+
+.mutual-participant-badge .response-check {
+  color: #10b981;
+  font-size: 10px;
+}
+
+.mutual-participant-badge .no-response {
+  color: #f87171;
+  font-size: 10px;
+}
+
+.mutual-prompt-section {
+  margin-bottom: 12px;
+}
+
+.mutual-prompt-section label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.mutual-prompt-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--deep-space-violet);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.mutual-prompt-input:focus {
+  outline: none;
+  border-color: var(--electric-cyan);
+  box-shadow: 0 0 0 2px var(--cyan-glow);
+}
+
+.mutual-prompt-input::placeholder {
+  color: var(--text-muted);
+}
+
+.mutual-status {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  min-height: 20px;
+}
+
+.mutual-status-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.mutual-status-text.ready {
+  color: #10b981;
+}
+
+.mutual-status-text.warning {
+  color: #f59e0b;
+}
+
+.mutual-status-text.error {
+  color: #f87171;
+}
+
+.mutual-status-text.processing {
+  color: var(--electric-cyan);
+}
+
+.mutual-start-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(45deg, #ff5722, #ff7043, #ff8a65);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.3);
+}
+
+.mutual-start-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(255, 87, 34, 0.4);
+  transform: translateY(-1px);
+}
+
+.mutual-start-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mutual-start-btn:disabled {
+  background: var(--dark-card);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* Input Section */
 .input-section {
   display: flex;
@@ -924,6 +1158,225 @@ header .subtitle {
 .copyright a:hover {
   opacity: 0.8;
   text-decoration: underline;
+}
+
+/* Mutual Review Section */
+.mutual-review-section {
+  background: var(--dark-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.mutual-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mutual-review-header h3 {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin: 0;
+  font-weight: 600;
+}
+
+.mutual-toggle-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mutual-toggle-btn:hover {
+  border-color: var(--electric-cyan);
+  color: var(--electric-cyan);
+  background: rgba(74, 250, 255, 0.1);
+}
+
+.mutual-review-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.mutual-participants {
+  min-height: 40px;
+}
+
+.mutual-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.mutual-hint.warning {
+  color: #f59e0b;
+}
+
+.mutual-participants-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mutual-participant {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.mutual-participant.connected {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.mutual-participant.disconnected {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.1);
+  opacity: 0.6;
+}
+
+.mutual-status-badge {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.mutual-status-badge.connected {
+  color: #10b981;
+}
+
+.mutual-status-badge.disconnected {
+  color: #f87171;
+}
+
+.mutual-prompt-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mutual-prompt-section label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mutual-prompt-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--deep-space-violet);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.mutual-prompt-input:focus {
+  outline: none;
+  border-color: var(--electric-cyan);
+  box-shadow: 0 0 0 2px var(--cyan-glow);
+}
+
+.mutual-prompt-input::placeholder {
+  color: var(--text-muted);
+}
+
+.mutual-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mutual-status-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.mutual-status.status-fetching .mutual-status-text,
+.mutual-status.status-sending .mutual-status-text {
+  color: #f59e0b;
+}
+
+.mutual-status.status-waiting .mutual-status-text {
+  color: #3b82f6;
+}
+
+.mutual-status.status-complete .mutual-status-text {
+  color: #10b981;
+}
+
+.mutual-status.status-error .mutual-status-text {
+  color: #f87171;
+}
+
+.mutual-status.status-ready .mutual-status-text {
+  color: var(--text-muted);
+}
+
+.mutual-progress {
+  height: 20px;
+  background: var(--border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-primary);
+  font-weight: 600;
+  z-index: 2;
+}
+
+.mutual-progress::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--electric-cyan), #3b82f6);
+  width: var(--progress-width, 0%);
+  transition: width 0.3s ease;
+  z-index: 1;
+}
+
+.mutual-start-btn {
+  padding: 10px 20px;
+  background: linear-gradient(45deg, #ff5722, #ff7043, #ff8a65);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.3);
+}
+
+.mutual-start-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(255, 87, 34, 0.4);
+  transform: translateY(-1px);
+}
+
+.mutual-start-btn:disabled {
+  background: var(--dark-card);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Settings Modal */

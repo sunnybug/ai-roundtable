@@ -45,6 +45,15 @@ let discussionState = {
   roundType: null  // 'initial', 'cross-eval', 'counter'
 };
 
+// Track AI response status
+const aiResponseStatus = {
+  claude: false,
+  chatgpt: false,
+  gemini: false,
+  chatglm: false,
+  aistudio: false
+};
+
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -52,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   setupDiscussionMode();
   setupSettings();
+  setupMutualReview();
   displayBuildTime();
   restoreSelectedAIs();
   loadAndApplyVisibleAIs();
@@ -75,7 +85,10 @@ function setupEventListeners() {
   AI_TYPES.forEach(aiType => {
     const checkbox = document.getElementById(`target-${aiType}`);
     if (checkbox) {
-      checkbox.addEventListener('change', saveSelectedAIs);
+      checkbox.addEventListener('change', () => {
+        saveSelectedAIs();
+        updateMutualParticipants();
+      });
     }
   });
 
@@ -143,9 +156,24 @@ function setupEventListeners() {
       updateMentionButtons();
     } else if (message.type === 'RESPONSE_CAPTURED') {
       log(`${message.aiType}: Response captured`, 'success');
+      // Update response status
+      if (message.content && message.content.trim().length > 0) {
+        aiResponseStatus[message.aiType] = true;
+        updateResponseIndicators();
+        // Update mutual review panel if it's visible
+        const mutualContent = document.getElementById('mutual-review-content');
+        if (mutualContent && !mutualContent.classList.contains('hidden')) {
+          updateMutualParticipants();
+          updateMutualStartButton();
+        }
+      }
       // Handle discussion mode response
       if (discussionState.active && discussionState.pendingResponses.has(message.aiType)) {
         handleDiscussionResponse(message.aiType, message.content);
+      }
+      // Handle mutual review response
+      if (mutualReviewState.active) {
+        handleMutualReviewResponse(message.aiType, message.content);
       }
     } else if (message.type === 'SEND_RESULT') {
       if (message.success) {
@@ -215,6 +243,9 @@ function updateTabStatus(aiType, connected) {
   } else {
     connectedTabs[aiType] = null;
   }
+  
+  // 更新互评参与者列表（显示连接状态）
+  updateMutualParticipants();
 }
 
 async function handleSend() {
@@ -252,6 +283,7 @@ async function handleSend() {
     if (parsed.mutual) {
       if (targets.length < 2) {
         log('Mutual review requires at least 2 AIs selected', 'error');
+        updateMutualStatus('error', '至少需要选择 2 个 AI');
       } else {
         log(`Mutual review: ${targets.join(', ')}`);
         await handleMutualReview(targets, parsed.prompt);
@@ -400,27 +432,54 @@ ${source.content}
 // Mutual Review Functions
 // ============================================
 
+// Mutual Review State
+let mutualReviewState = {
+  active: false,
+  participants: [],
+  responses: {},
+  pendingEvaluations: new Set()
+};
+
 async function handleMutualReview(participants, prompt) {
+  // Update UI state
+  mutualReviewState.active = true;
+  mutualReviewState.participants = participants;
+  mutualReviewState.responses = {};
+  mutualReviewState.pendingEvaluations = new Set();
+  
+  updateMutualStatus('fetching', `正在获取 ${participants.join(', ')} 的回复...`);
+  updateMutualProgress(0, participants.length);
+
   // Get current responses from all participants
   const responses = {};
+  let fetchedCount = 0;
 
   log(`[Mutual] Fetching responses from ${participants.join(', ')}...`);
 
   for (const ai of participants) {
+    updateMutualStatus('fetching', `正在获取 ${capitalize(ai)} 的回复...`);
     const response = await getLatestResponse(ai);
     if (!response || response.trim().length === 0) {
+      updateMutualStatus('error', `${capitalize(ai)} 没有回复，请确保已回复后再互评`);
       log(`[Mutual] Could not get ${ai}'s response - make sure ${ai} has replied first`, 'error');
+      mutualReviewState.active = false;
       return;
     }
     responses[ai] = response;
+    fetchedCount++;
+    updateMutualProgress(fetchedCount, participants.length);
     log(`[Mutual] Got ${ai}'s response (${response.length} chars)`);
   }
 
+  mutualReviewState.responses = responses;
+  updateMutualStatus('sending', `正在发送互评请求...`);
   log(`[Mutual] All responses collected. Sending cross-evaluations...`);
 
   // For each AI, send them the responses from all OTHER AIs
+  let sentCount = 0;
   for (const targetAI of participants) {
     const otherAIs = participants.filter(ai => ai !== targetAI);
+    mutualReviewState.pendingEvaluations.add(targetAI);
 
     // Build message with all other AIs' responses
     let evalMessage = `以下是其他 AI 的观点：\n`;
@@ -435,11 +494,41 @@ ${responses[sourceAI]}
 
     evalMessage += `\n${prompt}`;
 
+    updateMutualStatus('sending', `正在发送给 ${capitalize(targetAI)}...`);
     log(`[Mutual] Sending to ${targetAI}: ${otherAIs.join('+')} responses + prompt`);
     await sendToAI(targetAI, evalMessage);
+    sentCount++;
   }
 
+  updateMutualStatus('waiting', `等待所有 AI 完成评价...`);
+  updateMutualProgress(0, participants.length);
   log(`[Mutual] Complete! All ${participants.length} AIs received cross-evaluations`, 'success');
+}
+
+// Handle mutual review response
+function handleMutualReviewResponse(aiType, content) {
+  if (!mutualReviewState.active) return;
+  if (!mutualReviewState.participants.includes(aiType)) return;
+
+  mutualReviewState.pendingEvaluations.delete(aiType);
+  
+  const remaining = mutualReviewState.pendingEvaluations.size;
+  const total = mutualReviewState.participants.length;
+  const completed = total - remaining;
+  
+  updateMutualProgress(completed, total);
+  
+  if (remaining === 0) {
+    updateMutualStatus('complete', `互评完成！所有 ${total} 个 AI 已完成评价`);
+    mutualReviewState.active = false;
+    setTimeout(() => {
+      updateMutualStatus('ready', '准备就绪');
+      updateMutualProgress(0, 0);
+    }, 3000);
+  } else {
+    const remainingAIs = Array.from(mutualReviewState.pendingEvaluations).map(capitalize).join(', ');
+    updateMutualStatus('waiting', `等待 ${remainingAIs} 完成评价...`);
+  }
 }
 
 async function getLatestResponse(aiType) {
@@ -1108,6 +1197,9 @@ function applyVisibleAIs(visibleAIs) {
   
   // 更新@按钮显示（考虑连接状态和可见性）
   updateMentionButtons();
+  
+  // 更新互评参与者列表
+  updateMutualParticipants();
 }
 
 // 更新@按钮显示：只显示已连接且可见的AI
@@ -1121,6 +1213,9 @@ function updateMentionButtons() {
       mentionBtn.style.display = (isConnected && isVisible) ? '' : 'none';
     }
   });
+  
+  // 同时更新互评参与者列表
+  updateMutualParticipants();
 }
 
 // ============================================
@@ -1144,6 +1239,213 @@ function startConnectionRefresh() {
       checkConnectedTabs();
     }
   });
+}
+
+// ============================================
+// Mutual Review UI Functions
+// ============================================
+
+function setupMutualReview() {
+  const toggleBtn = document.getElementById('mutual-toggle-btn');
+  const header = document.querySelector('.mutual-review-header');
+  const content = document.getElementById('mutual-review-content');
+  const startBtn = document.getElementById('mutual-start-btn');
+  
+  // Toggle expand/collapse
+  const toggleMutualPanel = () => {
+    const isExpanded = !content.classList.contains('hidden');
+    if (isExpanded) {
+      content.classList.add('hidden');
+      toggleBtn.textContent = '▼';
+      toggleBtn.classList.remove('expanded');
+    } else {
+      content.classList.remove('hidden');
+      toggleBtn.textContent = '▲';
+      toggleBtn.classList.add('expanded');
+      updateMutualParticipants();
+      checkAllResponseStatus();
+    }
+  };
+  
+  toggleBtn.addEventListener('click', toggleMutualPanel);
+  if (header) {
+    header.addEventListener('click', (e) => {
+      if (e.target !== toggleBtn && !toggleBtn.contains(e.target)) {
+        toggleMutualPanel();
+      }
+    });
+  }
+  
+  // Start mutual review
+  startBtn.addEventListener('click', async () => {
+    const selectedAIs = AI_TYPES.filter(aiType => {
+      const checkbox = document.getElementById(`target-${aiType}`);
+      return checkbox && checkbox.checked;
+    });
+    
+    if (selectedAIs.length < 2) {
+      updateMutualStatus('error', '至少需要选择 2 个 AI');
+      log('Mutual review requires at least 2 AIs selected', 'error');
+      return;
+    }
+    
+    // Check if all selected AIs have responses
+    const missingResponses = selectedAIs.filter(ai => !aiResponseStatus[ai]);
+    if (missingResponses.length > 0) {
+      updateMutualStatus('warning', `以下 AI 还没有回复：${missingResponses.map(capitalize).join(', ')}`);
+      log(`[Mutual] 警告：${missingResponses.join(', ')} 还没有回复`, 'error');
+    }
+    
+    const promptInput = document.getElementById('mutual-prompt-input');
+    const customPrompt = promptInput.value.trim();
+    const prompt = customPrompt || '请评价以上观点。你同意什么？不同意什么？有什么补充？';
+    
+    startBtn.disabled = true;
+    updateMutualStatus('processing', '正在执行互评...');
+    
+    try {
+      await handleMutualReview(selectedAIs, prompt);
+      updateMutualStatus('ready', '互评完成！');
+    } catch (err) {
+      updateMutualStatus('error', '互评失败：' + err.message);
+    } finally {
+      startBtn.disabled = false;
+    }
+  });
+  
+  // Update when AI selection changes
+  AI_TYPES.forEach(aiType => {
+    const checkbox = document.getElementById(`target-${aiType}`);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
+        updateMutualParticipants();
+        updateMutualStartButton();
+      });
+    }
+  });
+  
+  // Initial update
+  updateMutualParticipants();
+  updateMutualStartButton();
+}
+
+async function updateMutualParticipants() {
+  const container = document.getElementById('mutual-participants-list');
+  if (!container) return;
+  
+  const selectedAIs = AI_TYPES.filter(aiType => {
+    const checkbox = document.getElementById(`target-${aiType}`);
+    return checkbox && checkbox.checked;
+  });
+  
+  if (selectedAIs.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  // Check response status for selected AIs
+  await checkResponseStatus(selectedAIs);
+  
+  let html = '';
+  selectedAIs.forEach(aiType => {
+    const isConnected = connectedTabs[aiType] !== null;
+    const hasResponse = aiResponseStatus[aiType];
+    const aiName = capitalize(aiType);
+    
+    html += `
+      <div class="mutual-participant-badge ${aiType}">
+        <span>${aiName}</span>
+        ${hasResponse ? '<span class="response-check">✓</span>' : '<span class="no-response">⚠</span>'}
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+  updateMutualStartButton();
+}
+
+function updateMutualStartButton() {
+  const startBtn = document.getElementById('mutual-start-btn');
+  if (!startBtn) return;
+  
+  const selectedAIs = AI_TYPES.filter(aiType => {
+    const checkbox = document.getElementById(`target-${aiType}`);
+    return checkbox && checkbox.checked;
+  });
+  
+  if (selectedAIs.length < 2) {
+    startBtn.disabled = true;
+    updateMutualStatus('ready', '至少需要选择 2 个 AI');
+    return;
+  }
+  
+  const allHaveResponse = selectedAIs.every(ai => aiResponseStatus[ai]);
+  if (!allHaveResponse) {
+    const missing = selectedAIs.filter(ai => !aiResponseStatus[ai]);
+    updateMutualStatus('warning', `部分 AI 还没有回复：${missing.map(capitalize).join(', ')}`);
+  } else {
+    updateMutualStatus('ready', '准备就绪，可以开始互评');
+  }
+  
+  startBtn.disabled = false;
+}
+
+function updateMutualStatus(state, text) {
+  const statusText = document.getElementById('mutual-status-text');
+  if (!statusText) return;
+  
+  statusText.textContent = text;
+  statusText.className = 'mutual-status-text ' + state;
+}
+
+async function checkResponseStatus(aiTypes) {
+  for (const aiType of aiTypes) {
+    try {
+      const response = await getLatestResponse(aiType);
+      aiResponseStatus[aiType] = !!(response && response.trim().length > 0);
+    } catch (err) {
+      aiResponseStatus[aiType] = false;
+    }
+  }
+  updateResponseIndicators();
+}
+
+async function checkAllResponseStatus() {
+  const allAIs = AI_TYPES.filter(aiType => {
+    const checkbox = document.getElementById(`target-${aiType}`);
+    return checkbox && checkbox.checked;
+  });
+  if (allAIs.length > 0) {
+    await checkResponseStatus(allAIs);
+  }
+}
+
+function updateResponseIndicators() {
+  AI_TYPES.forEach(aiType => {
+    const indicator = document.getElementById(`response-indicator-${aiType}`);
+    if (indicator) {
+      if (aiResponseStatus[aiType]) {
+        indicator.classList.add('has-response');
+      } else {
+        indicator.classList.remove('has-response');
+      }
+    }
+  });
+}
+
+function updateMutualProgress(current, total) {
+  const progressEl = document.getElementById('mutual-progress');
+  if (!progressEl) return;
+  
+  if (total === 0) {
+    progressEl.style.setProperty('--progress-width', '0%');
+    progressEl.textContent = '';
+    return;
+  }
+  
+  const percentage = (current / total) * 100;
+  progressEl.style.setProperty('--progress-width', `${percentage}%`);
+  progressEl.textContent = `${current}/${total}`;
 }
 
 // ============================================

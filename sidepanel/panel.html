@@ -31,27 +31,64 @@
         <input type="checkbox" id="target-claude" checked>
         <span class="target-name claude">Claude</span>
         <span class="status" id="status-claude">-</span>
+        <span class="response-indicator" id="response-indicator-claude" title="有回复">✓</span>
       </label>
       <label class="target-label">
         <input type="checkbox" id="target-chatgpt" checked>
         <span class="target-name chatgpt">ChatGPT</span>
         <span class="status" id="status-chatgpt">-</span>
+        <span class="response-indicator" id="response-indicator-chatgpt" title="有回复">✓</span>
       </label>
       <label class="target-label">
         <input type="checkbox" id="target-gemini" checked>
         <span class="target-name gemini">Gemini</span>
         <span class="status" id="status-gemini">-</span>
+        <span class="response-indicator" id="response-indicator-gemini" title="有回复">✓</span>
       </label>
       <label class="target-label">
         <input type="checkbox" id="target-chatglm" checked>
         <span class="target-name chatglm">ChatGLM</span>
         <span class="status" id="status-chatglm">-</span>
+        <span class="response-indicator" id="response-indicator-chatglm" title="有回复">✓</span>
       </label>
       <label class="target-label">
         <input type="checkbox" id="target-aistudio" checked>
         <span class="target-name aistudio">AI Studio</span>
         <span class="status" id="status-aistudio">-</span>
+        <span class="response-indicator" id="response-indicator-aistudio" title="有回复">✓</span>
       </label>
+    </section>
+
+    <!-- Mutual Review Section -->
+    <section class="mutual-review-section" id="mutual-review-section">
+      <div class="mutual-review-header">
+        <div class="mutual-header-left">
+          <span class="mutual-icon">🔄</span>
+          <h3>互评模式</h3>
+        </div>
+        <button class="mutual-toggle-btn" id="mutual-toggle-btn" title="展开/收起">▼</button>
+      </div>
+      <div class="mutual-review-content hidden" id="mutual-review-content">
+        <div class="mutual-participants" id="mutual-participants">
+          <p class="mutual-hint">参与互评的 AI：</p>
+          <div class="mutual-participants-list" id="mutual-participants-list">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+        <div class="mutual-prompt-section">
+          <label for="mutual-prompt-input">评价提示词（可选）：</label>
+          <input 
+            type="text" 
+            id="mutual-prompt-input" 
+            placeholder="例如：重点分析优缺点、有什么值得借鉴的..."
+            class="mutual-prompt-input"
+          >
+        </div>
+        <div class="mutual-status" id="mutual-status">
+          <div class="mutual-status-text" id="mutual-status-text">准备就绪</div>
+        </div>
+        <button class="mutual-start-btn" id="mutual-start-btn" disabled>开始互评</button>
+      </div>
     </section>
 
     <section class="input-section">
