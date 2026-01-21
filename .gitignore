@@ -20,8 +20,3 @@ package-lock.json
 
 # Build artifacts
 *.zip
-
-# Playwright
-test-results/
-playwright-report/
-playwright/.cache/
