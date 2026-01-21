@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   setupDiscussionMode();
   displayBuildTime();
+  restoreSelectedAIs();
 });
 
 function setupEventListeners() {
@@ -53,6 +54,14 @@ function setupEventListeners() {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       handleSend();
+    }
+  });
+
+  // Save selected AIs when checkbox changes
+  AI_TYPES.forEach(aiType => {
+    const checkbox = document.getElementById(`target-${aiType}`);
+    if (checkbox) {
+      checkbox.addEventListener('change', saveSelectedAIs);
     }
   });
 
@@ -824,6 +833,42 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ============================================
+// Save and Restore Selected AIs
+// ============================================
+
+function saveSelectedAIs() {
+  const selected = {};
+  AI_TYPES.forEach(aiType => {
+    const checkbox = document.getElementById(`target-${aiType}`);
+    if (checkbox) {
+      selected[aiType] = checkbox.checked;
+    }
+  });
+  
+  chrome.storage.local.set({ selectedAIs: selected }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('[AI Panel] Failed to save selected AIs:', chrome.runtime.lastError);
+    }
+  });
+}
+
+async function restoreSelectedAIs() {
+  try {
+    const result = await chrome.storage.local.get(['selectedAIs']);
+    if (result.selectedAIs) {
+      AI_TYPES.forEach(aiType => {
+        const checkbox = document.getElementById(`target-${aiType}`);
+        if (checkbox && result.selectedAIs.hasOwnProperty(aiType)) {
+          checkbox.checked = result.selectedAIs[aiType];
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[AI Panel] Failed to restore selected AIs:', err);
+  }
 }
 
 // ============================================
