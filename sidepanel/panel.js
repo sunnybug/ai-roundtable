@@ -490,7 +490,42 @@ function switchMode(mode) {
     discussionMode.classList.remove('hidden');
     normalBtn.classList.remove('active');
     discussionBtn.classList.add('active');
+    
+    // 自动选中2个当前连接上的AI
+    autoSelectConnectedAIs();
   }
+}
+
+function autoSelectConnectedAIs() {
+  // 获取所有连接的AI
+  const connectedAIs = AI_TYPES.filter(aiType => connectedTabs[aiType]);
+  
+  if (connectedAIs.length === 0) {
+    // 如果没有连接的AI，取消所有选择
+    document.querySelectorAll('input[name="participant"]').forEach(cb => {
+      cb.checked = false;
+    });
+    validateParticipants();
+    return;
+  }
+  
+  // 取消所有选择
+  document.querySelectorAll('input[name="participant"]').forEach(cb => {
+    cb.checked = false;
+  });
+  
+  // 选中前2个连接的AI
+  const selectedCount = Math.min(2, connectedAIs.length);
+  for (let i = 0; i < selectedCount; i++) {
+    const aiType = connectedAIs[i];
+    const checkbox = document.querySelector(`input[name="participant"][value="${aiType}"]`);
+    if (checkbox) {
+      checkbox.checked = true;
+    }
+  }
+  
+  // 更新按钮状态
+  validateParticipants();
 }
 
 function validateParticipants() {
