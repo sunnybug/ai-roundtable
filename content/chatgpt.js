@@ -73,8 +73,8 @@
       inputEl.value = text;
       inputEl.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      // Contenteditable div
-      inputEl.textContent = text;
+      // Contenteditable div - use innerHTML to preserve formatting
+      inputEl.innerHTML = `<p>${escapeHtml(text)}</p>`;
       inputEl.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
@@ -298,6 +298,12 @@
   }
 
   // Utility functions
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
