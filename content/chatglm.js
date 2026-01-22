@@ -5,6 +5,13 @@
 
   const AI_TYPE = 'chatglm';
 
+  // Prevent multiple script injections
+  if (window.__AI_PANEL_CHATGLM_LOADED__) {
+    console.log('[AI Panel] ChatGLM content script already loaded, skipping');
+    return;
+  }
+  window.__AI_PANEL_CHATGLM_LOADED__ = true;
+
   // Check if extension context is still valid
   function isContextValid() {
     return chrome.runtime && chrome.runtime.id;
@@ -136,21 +143,30 @@
           Array.from(document.querySelectorAll('div[class*="enter"], button')).map(el => el.className).join(', '));
       }
 
+      // Double-check isSending flag before clicking (in case of race condition)
+      if (isSending === false) {
+        // This shouldn't happen, but add extra safety
+        console.warn('[AI Panel] ChatGLM isSending flag was reset before click, re-setting');
+        isSending = true;
+      }
+
       // For div elements (ChatGLM uses div as button), trigger click events
       if (sendButton.tagName === 'DIV') {
         // Try to find the actual clickable element inside
         const clickableEl = sendButton.querySelector('div, img') || sendButton;
         
-        // ChatGLM's div button may need specific event sequence
-        // Trigger events in sequence to mimic a real click
-        const mouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
-        const mouseUp = new MouseEvent('mouseup', { bubbles: true, cancelable: true });
+        // Only use click() for div buttons to avoid duplicate triggers
+        // ChatGLM's button handler should respond to click event
+        // Avoid triggering mousedown/mouseup as they might cause duplicate sends
+        await sleep(50); // Small delay to ensure button is ready
         
-        clickableEl.dispatchEvent(mouseDown);
-        await sleep(20);
-        clickableEl.dispatchEvent(mouseUp);
-        await sleep(20);
-        clickableEl.click();
+        // Use a single click event with stopPropagation to prevent bubbling
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        });
+        clickableEl.dispatchEvent(clickEvent);
       } else {
         // Regular button
         await waitForButtonEnabled(sendButton);
@@ -163,10 +179,11 @@
 
       // Reset sending flag after message is actually sent (button clicked)
       // Use a longer delay to ensure the message is fully processed by ChatGLM
+      // Also wait a bit longer to prevent rapid successive clicks
       setTimeout(() => {
         isSending = false;
         console.log('[AI Panel] ChatGLM sending flag reset');
-      }, 2000); // Increased from 800ms to 2000ms to be safer
+      }, 3000); // Increased to 3000ms to be even safer
 
       return true;
     } catch (error) {
