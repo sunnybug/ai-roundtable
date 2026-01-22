@@ -589,19 +589,21 @@ async function nextRound() {
   document.getElementById('next-round-btn').disabled = true;
   document.getElementById('generate-summary-btn').disabled = true;
 
-  // Get previous round responses
-  const prevRound = discussionState.currentRound - 1;
-  const ai1Response = discussionState.history.find(
-    h => h.round === prevRound && h.ai === ai1
-  )?.content;
-  const ai2Response = discussionState.history.find(
-    h => h.round === prevRound && h.ai === ai2
-  )?.content;
+  log(`第 ${discussionState.currentRound} 轮: 正在获取双方最新回复...`);
+
+  // Get latest responses from both participants (before sending new messages)
+  const ai1Response = await getLatestResponse(ai1);
+  const ai2Response = await getLatestResponse(ai2);
 
   if (!ai1Response || !ai2Response) {
-    log('缺少上一轮的回复', 'error');
+    log('无法获取双方的最新回复，请确保双方都已回复', 'error');
+    // Re-enable button on error
+    document.getElementById('next-round-btn').disabled = false;
+    document.getElementById('generate-summary-btn').disabled = false;
     return;
   }
+
+  log(`第 ${discussionState.currentRound} 轮: 已获取双方回复，正在发送交叉评价请求...`);
 
   // Set pending responses
   discussionState.pendingResponses = new Set([ai1, ai2]);
