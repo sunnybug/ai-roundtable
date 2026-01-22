@@ -63,6 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
   sendBtn.addEventListener('click', handleSend);
 
+  // 移动标签到新窗口按钮
+  const moveTabsBtn = document.getElementById('move-tabs-btn');
+  if (moveTabsBtn) {
+    moveTabsBtn.addEventListener('click', moveTabsToNewWindow);
+  }
+
   // Enter to send, Shift+Enter for new line (like ChatGPT)
   // But ignore Enter during IME composition (e.g., Chinese input)
   messageInput.addEventListener('keydown', (e) => {
@@ -162,11 +168,6 @@ function updateTabStatus(aiType, connected) {
   if (statusEl) {
     statusEl.textContent = connected ? 'Connected' : 'Not found';
     statusEl.className = 'status ' + (connected ? 'connected' : 'disconnected');
-  }
-  if (connected) {
-    connectedTabs[aiType] = true;
-  } else {
-    connectedTabs[aiType] = null;
   }
 }
 
@@ -1270,5 +1271,84 @@ async function displayBuildTime() {
     if (buildTimeEl) {
       buildTimeEl.textContent = '加载失败';
     }
+  }
+}
+
+// ============================================
+// Move Tabs to New Window
+// ============================================
+
+async function moveTabsToNewWindow() {
+  try {
+    // 获取所有选中且已连接的AI标签ID
+    const selectedTabIds = [];
+    const selectedAINames = [];
+
+    for (const aiType of AI_TYPES) {
+      const checkbox = document.getElementById(`target-${aiType}`);
+      if (checkbox && checkbox.checked && connectedTabs[aiType]) {
+        selectedTabIds.push(connectedTabs[aiType]);
+        selectedAINames.push(capitalize(aiType));
+      }
+    }
+
+    if (selectedTabIds.length === 0) {
+      log('没有选中的已连接AI标签', 'error');
+      return;
+    }
+
+    log(`正在移动 ${selectedAINames.join(', ')} 到新窗口...`);
+
+    // 创建新窗口
+    const newWindow = await chrome.windows.create({
+      url: 'about:blank',
+      focused: true
+    });
+
+    // 移动AI标签到新窗口
+    await chrome.tabs.move(selectedTabIds, {
+      windowId: newWindow.id,
+      index: -1
+    });
+
+    // 关闭新窗口创建时的空白标签
+    const tabs = await chrome.tabs.query({ windowId: newWindow.id });
+    const blankTab = tabs.find(tab => tab.url === 'about:blank' || tab.url === chrome.runtime.getURL('about:blank'));
+    if (blankTab) {
+      await chrome.tabs.remove(blankTab.id);
+    }
+
+    // 设置侧边栏在新窗口中启用
+    if (chrome.sidePanel && chrome.sidePanel.setOptions) {
+      try {
+        await chrome.sidePanel.setOptions({
+          windowId: newWindow.id,
+          enabled: true
+        });
+      } catch (err) {
+        console.warn('[Move Tabs] Could not set sidePanel options:', err);
+      }
+    }
+
+    // 通过 background.js 打开新窗口的侧边栏
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'OPEN_SIDE_PANEL_IN_WINDOW',
+        windowId: newWindow.id
+      });
+    } catch (err) {
+      console.warn('[Move Tabs] Could not open side panel via background:', err);
+    }
+
+    log(`已将 ${selectedAINames.length} 个AI标签移动到新窗口`, 'success');
+
+    // 提示用户
+    setTimeout(() => {
+      log('侧边栏应该已在新窗口中自动打开', 'info');
+    }, 1000);
+
+  } catch (err) {
+    log('移动标签失败: ' + err.message, 'error');
+    console.error('[Move Tabs] Error:', err);
   }
 }

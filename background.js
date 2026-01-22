@@ -59,6 +59,19 @@ async function handleMessage(message, sender) {
       }
       return { success: true };
 
+    case 'OPEN_SIDE_PANEL_IN_WINDOW':
+      // Open side panel in specific window
+      if (message.windowId && chrome.sidePanel && chrome.sidePanel.open) {
+        try {
+          await chrome.sidePanel.open({ windowId: message.windowId });
+          return { success: true };
+        } catch (err) {
+          console.error('[Background] Failed to open side panel:', err);
+          return { success: false, error: err.message };
+        }
+      }
+      return { success: false, error: 'Side panel API not available' };
+
     default:
       return { error: 'Unknown message type' };
   }

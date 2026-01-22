@@ -405,6 +405,15 @@ header h1 {
   flex-shrink: 0;
 }
 
+.input-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.input-actions button {
+  flex: 1;
+}
+
 #message-input {
   width: 100%;
   padding: 12px;
@@ -426,6 +435,36 @@ header h1 {
 
 #message-input::placeholder {
   color: var(--text-muted);
+}
+
+.secondary-btn {
+  padding: 12px 16px;
+  background: var(--dark-card);
+  color: var(--electric-cyan);
+  border: 1px solid var(--electric-cyan);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.secondary-btn:hover {
+  background: rgba(74, 250, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(74, 250, 255, 0.2);
+}
+
+.secondary-btn:active {
+  transform: translateY(0);
+}
+
+.secondary-btn:disabled {
+  background: var(--dark-card);
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 #send-btn {
