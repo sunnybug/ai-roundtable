@@ -132,6 +132,17 @@ async function sendMessageToAI(aiType, message) {
           message
         });
 
+        // If content script is already sending, treat it as success to avoid duplicate sends
+        if (response?.error && response.error.includes('Already sending')) {
+          console.log(`[AI Panel] ${aiType} is already sending, treating as success`);
+          notifySidePanel('SEND_RESULT', {
+            aiType,
+            success: true,
+            error: null
+          });
+          return { success: true };
+        }
+
         // Notify side panel
         notifySidePanel('SEND_RESULT', {
           aiType,

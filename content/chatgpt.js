@@ -29,6 +29,13 @@
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'INJECT_MESSAGE') {
+      // Check if already sending to prevent duplicate sends
+      if (isSending) {
+        console.log('[AI Panel] ChatGPT already sending, ignoring duplicate request');
+        sendResponse({ success: false, error: 'Already sending a message' });
+        return true;
+      }
+      
       injectMessage(message.message)
         .then(() => sendResponse({ success: true }))
         .catch(err => sendResponse({ success: false, error: err.message }));
@@ -46,8 +53,16 @@
   setupResponseObserver();
 
   async function injectMessage(text) {
-    // ChatGPT uses a textarea or contenteditable div
-    const inputSelectors = [
+    // Prevent duplicate sending
+    if (isSending) {
+      console.log('[AI Panel] ChatGPT already sending, skipping duplicate request');
+      return false;
+    }
+    isSending = true;
+
+    try {
+      // ChatGPT uses a textarea or contenteditable div
+      const inputSelectors = [
       '#prompt-textarea',
       'textarea[data-id="root"]',
       'div[contenteditable="true"][data-placeholder]',
@@ -96,7 +111,19 @@
     console.log('[AI Panel] ChatGPT message sent, starting response capture...');
     waitForStreamingComplete();
 
+    // Reset sending flag after message is actually sent
+    setTimeout(() => {
+      isSending = false;
+      console.log('[AI Panel] ChatGPT sending flag reset');
+    }, 2000);
+
     return true;
+    } catch (error) {
+      console.error('[AI Panel] ChatGPT injection error:', error);
+      // Reset flag immediately on error
+      isSending = false;
+      throw error;
+    }
   }
 
   function findSendButton() {
@@ -173,6 +200,7 @@
 
   let lastCapturedContent = '';
   let isCapturing = false;
+  let isSending = false; // Prevent duplicate message sending
 
   function checkForResponse(node) {
     if (isCapturing) return;

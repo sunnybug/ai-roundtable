@@ -29,6 +29,13 @@
     console.log('[AI Panel] ChatGLM received message:', message.type);
 
     if (message.type === 'INJECT_MESSAGE') {
+      // Check if already sending to prevent duplicate sends
+      if (isSending) {
+        console.log('[AI Panel] ChatGLM already sending, ignoring duplicate request');
+        sendResponse({ success: false, error: 'Already sending a message' });
+        return true;
+      }
+      
       injectMessage(message.message)
         .then(() => {
           console.log('[AI Panel] ChatGLM message injected successfully');
@@ -67,7 +74,8 @@
   }
 
   async function injectMessage(text) {
-    // Prevent duplicate sending
+    // Prevent duplicate sending - this check is also done in the message listener
+    // but we keep it here as a double safeguard
     if (isSending) {
       console.log('[AI Panel] ChatGLM already sending, skipping duplicate request');
       return false;
@@ -153,6 +161,13 @@
       console.log('[AI Panel] ChatGLM message sent, starting response capture...');
       waitForStreamingComplete();
 
+      // Reset sending flag after message is actually sent (button clicked)
+      // Use a longer delay to ensure the message is fully processed by ChatGLM
+      setTimeout(() => {
+        isSending = false;
+        console.log('[AI Panel] ChatGLM sending flag reset');
+      }, 2000); // Increased from 800ms to 2000ms to be safer
+
       return true;
     } catch (error) {
       console.error('[AI Panel] ChatGLM injection error:', error);
@@ -160,12 +175,6 @@
       isSending = false;
       throw error;
     }
-    
-    // Reset sending flag after a short delay to prevent rapid duplicate sends
-    // But allow normal operation after message is sent
-    setTimeout(() => {
-      isSending = false;
-    }, 800);
   }
 
   function findSendButton() {

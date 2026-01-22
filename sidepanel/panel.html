@@ -35,6 +35,7 @@
         <span class="target-name claude">Claude</span>
         <span class="status" id="status-claude">-</span>
         <span class="response-indicator" id="response-indicator-claude" title="有回复">✓</span>
+        <button class="response-btn" id="response-claude" title="查看当前回答">💬</button>
         <button class="launch-btn" id="launch-claude" title="在新标签页中打开 Claude">🚀</button>
       </label>
       <label class="target-label">
@@ -42,6 +43,7 @@
         <span class="target-name chatgpt">ChatGPT</span>
         <span class="status" id="status-chatgpt">-</span>
         <span class="response-indicator" id="response-indicator-chatgpt" title="有回复">✓</span>
+        <button class="response-btn" id="response-chatgpt" title="查看当前回答">💬</button>
         <button class="launch-btn" id="launch-chatgpt" title="在新标签页中打开 ChatGPT">🚀</button>
       </label>
       <label class="target-label">
@@ -49,6 +51,7 @@
         <span class="target-name gemini">Gemini</span>
         <span class="status" id="status-gemini">-</span>
         <span class="response-indicator" id="response-indicator-gemini" title="有回复">✓</span>
+        <button class="response-btn" id="response-gemini" title="查看当前回答">💬</button>
         <button class="launch-btn" id="launch-gemini" title="在新标签页中打开 Gemini">🚀</button>
       </label>
       <label class="target-label">
@@ -56,6 +59,7 @@
         <span class="target-name chatglm">ChatGLM</span>
         <span class="status" id="status-chatglm">-</span>
         <span class="response-indicator" id="response-indicator-chatglm" title="有回复">✓</span>
+        <button class="response-btn" id="response-chatglm" title="查看当前回答">💬</button>
         <button class="launch-btn" id="launch-chatglm" title="在新标签页中打开 ChatGLM">🚀</button>
       </label>
       <label class="target-label">
@@ -63,6 +67,7 @@
         <span class="target-name aistudio">AI Studio</span>
         <span class="status" id="status-aistudio">-</span>
         <span class="response-indicator" id="response-indicator-aistudio" title="有回复">✓</span>
+        <button class="response-btn" id="response-aistudio" title="查看当前回答">💬</button>
         <button class="launch-btn" id="launch-aistudio" title="在新标签页中打开 AI Studio">🚀</button>
       </label>
     </section>
@@ -283,6 +288,24 @@
         </div>
         <div class="settings-footer">
           <button class="settings-save-btn" id="settings-save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Response Modal -->
+    <div class="response-modal hidden" id="response-modal">
+      <div class="response-overlay"></div>
+      <div class="response-content">
+        <div class="response-header">
+          <h2 id="response-modal-title">当前回答</h2>
+          <button class="response-close" id="response-close">×</button>
+        </div>
+        <div class="response-body">
+          <div id="response-content-text" class="response-text"></div>
+        </div>
+        <div class="response-footer">
+          <button class="response-copy-btn" id="response-copy-btn">复制</button>
+          <button class="response-close-btn" id="response-close-btn">关闭</button>
         </div>
       </div>
     </div>

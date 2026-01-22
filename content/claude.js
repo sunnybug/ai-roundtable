@@ -29,6 +29,13 @@
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'INJECT_MESSAGE') {
+      // Check if already sending to prevent duplicate sends
+      if (isSending) {
+        console.log('[AI Panel] Claude already sending, ignoring duplicate request');
+        sendResponse({ success: false, error: 'Already sending a message' });
+        return true;
+      }
+      
       injectMessage(message.message)
         .then(() => sendResponse({ success: true }))
         .catch(err => sendResponse({ success: false, error: err.message }));
@@ -46,8 +53,16 @@
   setupResponseObserver();
 
   async function injectMessage(text) {
-    // Claude uses a contenteditable div with ProseMirror
-    const inputSelectors = [
+    // Prevent duplicate sending
+    if (isSending) {
+      console.log('[AI Panel] Claude already sending, skipping duplicate request');
+      return false;
+    }
+    isSending = true;
+
+    try {
+      // Claude uses a contenteditable div with ProseMirror
+      const inputSelectors = [
       'div[contenteditable="true"].ProseMirror',
       'div.ProseMirror[contenteditable="true"]',
       '[data-placeholder="How can Claude help you today?"]',
@@ -89,7 +104,19 @@
     console.log('[AI Panel] Claude message sent, starting response capture...');
     waitForStreamingComplete();
 
+    // Reset sending flag after message is actually sent
+    setTimeout(() => {
+      isSending = false;
+      console.log('[AI Panel] Claude sending flag reset');
+    }, 2000);
+
     return true;
+    } catch (error) {
+      console.error('[AI Panel] Claude injection error:', error);
+      // Reset flag immediately on error
+      isSending = false;
+      throw error;
+    }
   }
 
   function findSendButton() {
@@ -162,6 +189,7 @@
 
   let lastCapturedContent = '';
   let isCapturing = false;
+  let isSending = false; // Prevent duplicate message sending
 
   function checkForResponse(node) {
     if (isCapturing) return;

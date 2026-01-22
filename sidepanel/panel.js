@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDiscussionMode();
   setupSettings();
   setupMutualReview();
+  setupResponseModal();
   displayBuildTime();
   loadAndApplyVisibleAIs();
   checkConnectedTabs(); // 在加载配置后检查连接状态，会自动应用显示逻辑
@@ -86,6 +87,16 @@ function setupEventListeners() {
         e.preventDefault();
         e.stopPropagation(); // 防止触发label的点击事件
         launchAI(aiType);
+      });
+    }
+
+    // 当前回答按钮事件监听
+    const responseBtn = document.getElementById(`response-${aiType}`);
+    if (responseBtn) {
+      responseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // 防止触发label的点击事件
+        showResponse(aiType);
       });
     }
   });
@@ -1298,6 +1309,81 @@ async function displayBuildTime() {
     if (buildTimeEl) {
       buildTimeEl.textContent = '加载失败';
     }
+  }
+}
+
+// ============================================
+// Response Modal Functions
+// ============================================
+
+function setupResponseModal() {
+  const responseModal = document.getElementById('response-modal');
+  const responseClose = document.getElementById('response-close');
+  const responseCloseBtn = document.getElementById('response-close-btn');
+  const responseOverlay = document.querySelector('.response-overlay');
+  const responseCopyBtn = document.getElementById('response-copy-btn');
+
+  // Close modal handlers
+  const closeModal = () => {
+    responseModal.classList.add('hidden');
+  };
+
+  responseClose.addEventListener('click', closeModal);
+  responseCloseBtn.addEventListener('click', closeModal);
+  responseOverlay.addEventListener('click', closeModal);
+
+  // Copy button handler
+  responseCopyBtn.addEventListener('click', () => {
+    const responseText = document.getElementById('response-content-text');
+    const text = responseText.textContent;
+    if (text && text.trim()) {
+      navigator.clipboard.writeText(text).then(() => {
+        log('回答已复制到剪贴板', 'success');
+        // 临时改变按钮文本
+        const originalText = responseCopyBtn.textContent;
+        responseCopyBtn.textContent = '已复制！';
+        setTimeout(() => {
+          responseCopyBtn.textContent = originalText;
+        }, 1000);
+      }).catch(err => {
+        log('复制失败: ' + err.message, 'error');
+      });
+    }
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !responseModal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+}
+
+async function showResponse(aiType) {
+  const responseModal = document.getElementById('response-modal');
+  const responseTitle = document.getElementById('response-modal-title');
+  const responseText = document.getElementById('response-content-text');
+
+  // Update title
+  responseTitle.textContent = `${capitalize(aiType)} 的当前回答`;
+
+  // Show loading state
+  responseText.textContent = '正在获取回答...';
+  responseModal.classList.remove('hidden');
+
+  try {
+    const response = await getLatestResponse(aiType);
+    
+    if (response && response.trim().length > 0) {
+      responseText.textContent = response;
+      log(`已获取 ${capitalize(aiType)} 的回答 (${response.length} 字符)`, 'success');
+    } else {
+      responseText.textContent = `暂无回答内容。\n\n请确保：\n1. ${capitalize(aiType)} 标签页已打开\n2. ${capitalize(aiType)} 已经回复过消息`;
+      log(`${capitalize(aiType)} 暂无回答`, 'error');
+    }
+  } catch (err) {
+    responseText.textContent = `获取回答失败: ${err.message}`;
+    log(`获取 ${capitalize(aiType)} 回答失败: ${err.message}`, 'error');
   }
 }
 
