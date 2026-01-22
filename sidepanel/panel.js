@@ -1302,7 +1302,8 @@ async function moveTabsToNewWindow() {
     // 创建新窗口
     const newWindow = await chrome.windows.create({
       url: 'about:blank',
-      focused: true
+      focused: true,
+      state: 'maximized'
     });
 
     // 移动AI标签到新窗口
