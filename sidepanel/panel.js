@@ -48,14 +48,14 @@ const aiResponseStatus = {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  checkConnectedTabs();
   setupEventListeners();
   setupDiscussionMode();
   setupSettings();
   setupMutualReview();
   displayBuildTime();
-  restoreSelectedAIs();
   loadAndApplyVisibleAIs();
+  checkConnectedTabs(); // 在加载配置后检查连接状态，会自动应用显示逻辑
+  restoreSelectedAIs(); // 恢复用户的选中状态
   // 启动定时刷新连接状态
   startConnectionRefresh();
 });
@@ -78,61 +78,19 @@ function setupEventListeners() {
     if (checkbox) {
       checkbox.addEventListener('change', () => {
         saveSelectedAIs();
-        updateMutualParticipants();
       });
     }
-  });
-
-  // Shortcut buttons (/cross, <-)
-  document.querySelectorAll('.shortcut-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const insertText = btn.dataset.insert;
-      const cursorPos = messageInput.selectionStart;
-      const textBefore = messageInput.value.substring(0, cursorPos);
-      const textAfter = messageInput.value.substring(cursorPos);
-
-      messageInput.value = textBefore + insertText + textAfter;
-      messageInput.focus();
-      messageInput.selectionStart = messageInput.selectionEnd = cursorPos + insertText.length;
-    });
-  });
-
-  // Mention buttons - insert @AI into textarea
-  document.querySelectorAll('.mention-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const mention = btn.dataset.mention;
-      const cursorPos = messageInput.selectionStart;
-      const textBefore = messageInput.value.substring(0, cursorPos);
-      const textAfter = messageInput.value.substring(cursorPos);
-
-      // Add space before if needed
-      const needsSpace = textBefore.length > 0 && !textBefore.endsWith(' ') && !textBefore.endsWith('\n');
-      const insertText = (needsSpace ? ' ' : '') + mention + ' ';
-
-      messageInput.value = textBefore + insertText + textAfter;
-      messageInput.focus();
-      messageInput.selectionStart = messageInput.selectionEnd = cursorPos + insertText.length;
-    });
   });
 
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'TAB_STATUS_UPDATE') {
       updateTabStatus(message.aiType, message.connected);
-      // 连接状态变化时更新@按钮
-      updateMentionButtons();
     } else if (message.type === 'RESPONSE_CAPTURED') {
       log(`${message.aiType}: Response captured`, 'success');
       // Update response status
       if (message.content && message.content.trim().length > 0) {
         aiResponseStatus[message.aiType] = true;
-        updateResponseIndicators();
-        // Update mutual review panel if it's visible
-        const mutualContent = document.getElementById('mutual-review-content');
-        if (mutualContent && !mutualContent.classList.contains('hidden')) {
-          updateMutualParticipants();
-          updateMutualStartButton();
-        }
       }
       // Handle discussion mode response
       if (discussionState.active && discussionState.pendingResponses.has(message.aiType)) {
@@ -155,7 +113,7 @@ function setupEventListeners() {
 async function checkConnectedTabs() {
   try {
     const tabs = await chrome.tabs.query({});
-    
+
     // 重置所有连接状态
     const newConnectedState = {
       claude: null,
@@ -173,7 +131,7 @@ async function checkConnectedTabs() {
         updateTabStatus(aiType, true);
       }
     }
-    
+
     // 更新未连接的AI状态
     for (const aiType of AI_TYPES) {
       if (!newConnectedState[aiType]) {
@@ -181,9 +139,9 @@ async function checkConnectedTabs() {
         updateTabStatus(aiType, false);
       }
     }
-    
-    // 更新@按钮显示
-    updateMentionButtons();
+
+    // 重新应用可见性设置（只更新显示，不改变默认选中状态）
+    applyVisibleAIs(visibleAIsCache, false);
   } catch (err) {
     log('Error checking tabs: ' + err.message, 'error');
   }
@@ -210,30 +168,17 @@ function updateTabStatus(aiType, connected) {
   } else {
     connectedTabs[aiType] = null;
   }
-  
-  // 更新互评参与者列表（显示连接状态）
-  updateMutualParticipants();
 }
 
 async function handleSend() {
   const message = messageInput.value.trim();
   if (!message) return;
 
-  // Parse message for @ mentions
-  const parsed = parseMessage(message);
-
-  // Determine targets
-  let targets;
-  if (parsed.mentions.length > 0) {
-    // If @ mentioned specific AIs, only send to those
-    targets = parsed.mentions;
-  } else {
-    // Otherwise use checkbox selection
-    targets = AI_TYPES.filter(ai => {
-      const checkbox = document.getElementById(`target-${ai}`);
-      return checkbox && checkbox.checked;
-    });
-  }
+  // Determine targets - always use checkbox selection
+  let targets = AI_TYPES.filter(ai => {
+    const checkbox = document.getElementById(`target-${ai}`);
+    return checkbox && checkbox.checked;
+  });
 
   if (targets.length === 0) {
     log('No targets selected', 'error');
@@ -246,26 +191,10 @@ async function handleSend() {
   messageInput.value = '';
 
   try {
-    // If mutual review, handle specially
-    if (parsed.mutual) {
-      if (targets.length < 2) {
-        log('Mutual review requires at least 2 AIs selected', 'error');
-        updateMutualStatus('error', '至少需要选择 2 个 AI');
-      } else {
-        log(`Mutual review: ${targets.join(', ')}`);
-        await handleMutualReview(targets, parsed.prompt);
-      }
-    }
-    // If cross-reference, handle specially
-    else if (parsed.crossRef) {
-      log(`Cross-reference: ${parsed.targetAIs.join(', ')} <- ${parsed.sourceAIs.join(', ')}`);
-      await handleCrossReference(parsed);
-    } else {
-      // Send to target(s)
-      log(`Sending to: ${targets.join(', ')}`);
-      for (const target of targets) {
-        await sendToAI(target, message);
-      }
+    // Send to target(s)
+    log(`Sending to: ${targets.join(', ')}`);
+    for (const target of targets) {
+      await sendToAI(target, message);
     }
   } catch (err) {
     log('Error: ' + err.message, 'error');
@@ -275,126 +204,6 @@ async function handleSend() {
   messageInput.focus();
 }
 
-function parseMessage(message) {
-  // Check for /mutual command: /mutual [optional prompt]
-  // Triggers mutual review based on current responses (no new topic needed)
-  const trimmedMessage = message.trim();
-  if (trimmedMessage.toLowerCase() === '/mutual' || trimmedMessage.toLowerCase().startsWith('/mutual ')) {
-    // Extract everything after "/mutual " as the prompt
-    const prompt = trimmedMessage.length > 7 ? trimmedMessage.substring(7).trim() : '';
-    return {
-      mutual: true,
-      prompt: prompt || '请评价以上观点。你同意什么？不同意什么？有什么补充？',
-      crossRef: false,
-      mentions: [],
-      originalMessage: message
-    };
-  }
-
-  // Check for /cross command first: /cross @targets <- @sources message
-  // Use this for complex cases (3 AIs, or when you want to be explicit)
-  if (message.trim().toLowerCase().startsWith('/cross ')) {
-    const arrowIndex = message.indexOf('<-');
-    if (arrowIndex === -1) {
-      // No arrow found, treat as regular message
-      return { crossRef: false, mentions: [], originalMessage: message };
-    }
-
-    const beforeArrow = message.substring(7, arrowIndex).trim(); // Skip "/cross "
-    const afterArrow = message.substring(arrowIndex + 2).trim();  // Skip "<-"
-
-    // Extract targets (before arrow)
-    const mentionPattern = /@(claude|chatgpt|gemini|chatglm|aistudio)/gi;
-    const targetMatches = [...beforeArrow.matchAll(mentionPattern)];
-    const targetAIs = [...new Set(targetMatches.map(m => m[1].toLowerCase()))];
-
-    // Extract sources and message (after arrow)
-    // Find all @mentions in afterArrow, sources are all @mentions
-    // Message is everything after the last @mention
-    const sourceMatches = [...afterArrow.matchAll(mentionPattern)];
-    const sourceAIs = [...new Set(sourceMatches.map(m => m[1].toLowerCase()))];
-
-    // Find where the actual message starts (after the last @mention)
-    let actualMessage = afterArrow;
-    if (sourceMatches.length > 0) {
-      const lastMatch = sourceMatches[sourceMatches.length - 1];
-      const lastMentionEnd = lastMatch.index + lastMatch[0].length;
-      actualMessage = afterArrow.substring(lastMentionEnd).trim();
-    }
-
-    if (targetAIs.length > 0 && sourceAIs.length > 0) {
-      return {
-        crossRef: true,
-        mentions: [...targetAIs, ...sourceAIs],
-        targetAIs,
-        sourceAIs,
-        originalMessage: actualMessage
-      };
-    }
-  }
-
-  // Pattern-based detection for @ mentions
-  const mentionPattern = /@(claude|chatgpt|gemini|chatglm|aistudio)/gi;
-  const matches = [...message.matchAll(mentionPattern)];
-  const mentions = [...new Set(matches.map(m => m[1].toLowerCase()))];
-
-  // For exactly 2 AIs: use keyword detection (simpler syntax)
-  // Last mentioned = source (being evaluated), first = target (doing evaluation)
-  if (mentions.length === 2) {
-    const evalKeywords = /评价|看看|怎么样|怎么看|如何|讲的|说的|回答|赞同|同意|分析|认为|观点|看法|意见|借鉴|批评|补充|对比|evaluate|think of|opinion|review|agree|analysis|compare|learn from/i;
-
-    if (evalKeywords.test(message)) {
-      const sourceAI = matches[matches.length - 1][1].toLowerCase();
-      const targetAI = matches[0][1].toLowerCase();
-
-      return {
-        crossRef: true,
-        mentions,
-        targetAIs: [targetAI],
-        sourceAIs: [sourceAI],
-        originalMessage: message
-      };
-    }
-  }
-
-  // For 3+ AIs without /cross command: just send to all (no cross-reference)
-  // User should use /cross command for complex 3-AI scenarios
-  return {
-    crossRef: false,
-    mentions,
-    originalMessage: message
-  };
-}
-
-async function handleCrossReference(parsed) {
-  // Get responses from all source AIs
-  const sourceResponses = [];
-
-  for (const sourceAI of parsed.sourceAIs) {
-    const response = await getLatestResponse(sourceAI);
-    if (!response) {
-      log(`Could not get ${sourceAI}'s response`, 'error');
-      return;
-    }
-    sourceResponses.push({ ai: sourceAI, content: response });
-  }
-
-  // Build the full message with XML tags for each source
-  let fullMessage = parsed.originalMessage + '\n';
-
-  for (const source of sourceResponses) {
-    fullMessage += `
-<${source.ai}_response>
-${source.content}
-</${source.ai}_response>`;
-  }
-
-  // Send to all target AIs
-  for (const targetAI of parsed.targetAIs) {
-    await sendToAI(targetAI, fullMessage);
-  }
-}
-
 // ============================================
 // Mutual Review Functions
 // ============================================
@@ -402,91 +211,106 @@ ${source.content}
 // Mutual Review State
 let mutualReviewState = {
   active: false,
-  participants: [],
-  responses: {},
+  speakers: [],           // 被评论的AI列表
+  reviewers: [],          // 进行评论的AI列表
+  reviewMatrix: {},       // 评论关系矩阵: {reviewer: [speaker1, speaker2, ...]}
+  responses: {},          // 发言者的回复内容
   pendingEvaluations: new Set()
 };
 
-async function handleMutualReview(participants, prompt) {
-  // Update UI state
+async function handleMutualReview(speakers, reviewers, reviewMatrix, prompt) {
+  // 更新UI状态
   mutualReviewState.active = true;
-  mutualReviewState.participants = participants;
+  mutualReviewState.speakers = speakers;
+  mutualReviewState.reviewers = reviewers;
+  mutualReviewState.reviewMatrix = reviewMatrix;
   mutualReviewState.responses = {};
   mutualReviewState.pendingEvaluations = new Set();
-  
-  updateMutualStatus('fetching', `正在获取 ${participants.join(', ')} 的回复...`);
-  updateMutualProgress(0, participants.length);
 
-  // Get current responses from all participants
+  updateMutualStatus('fetching', `正在获取发言者的回复...`);
+  updateMutualProgress(0, speakers.length);
+
+  // 获取所有发言者的回复
   const responses = {};
   let fetchedCount = 0;
 
-  log(`[Mutual] Fetching responses from ${participants.join(', ')}...`);
+  log(`[Mutual] 获取发言者回复: ${speakers.join(', ')}`);
 
-  for (const ai of participants) {
+  for (const ai of speakers) {
     updateMutualStatus('fetching', `正在获取 ${capitalize(ai)} 的回复...`);
     const response = await getLatestResponse(ai);
     if (!response || response.trim().length === 0) {
       updateMutualStatus('error', `${capitalize(ai)} 没有回复，请确保已回复后再互评`);
-      log(`[Mutual] Could not get ${ai}'s response - make sure ${ai} has replied first`, 'error');
+      log(`[Mutual] 无法获取 ${ai} 的回复 - 请确保 ${ai} 已回复`, 'error');
       mutualReviewState.active = false;
       return;
     }
     responses[ai] = response;
     fetchedCount++;
-    updateMutualProgress(fetchedCount, participants.length);
-    log(`[Mutual] Got ${ai}'s response (${response.length} chars)`);
+    updateMutualProgress(fetchedCount, speakers.length);
+    log(`[Mutual] 获取到 ${ai} 的回复 (${response.length} 字符)`);
   }
 
   mutualReviewState.responses = responses;
   updateMutualStatus('sending', `正在发送互评请求...`);
-  log(`[Mutual] All responses collected. Sending cross-evaluations...`);
+  log(`[Mutual] 所有发言者回复已收集。发送评论请求...`);
 
-  // For each AI, send them the responses from all OTHER AIs
+  // 为每个评论者发送对应发言者的回复
   let sentCount = 0;
-  for (const targetAI of participants) {
-    const otherAIs = participants.filter(ai => ai !== targetAI);
-    mutualReviewState.pendingEvaluations.add(targetAI);
+  const totalEvaluations = Object.values(reviewMatrix).reduce((sum, arr) => sum + arr.length, 0);
+  updateMutualProgress(0, totalEvaluations);
 
-    // Build message with all other AIs' responses
+  for (const reviewer of reviewers) {
+    const speakersToReview = reviewMatrix[reviewer] || [];
+
+    if (speakersToReview.length === 0) {
+      log(`[Mutual] ${reviewer} 没有需要评论的对象，跳过`);
+      continue;
+    }
+
+    mutualReviewState.pendingEvaluations.add(reviewer);
+
+    // 构建评论消息
     let evalMessage = `以下是其他 AI 的观点：\n`;
 
-    for (const sourceAI of otherAIs) {
-      evalMessage += `
-<${sourceAI}_response>
-${responses[sourceAI]}
-</${sourceAI}_response>
+    for (const speaker of speakersToReview) {
+      if (responses[speaker]) {
+        evalMessage += `
+<${speaker}_response>
+${responses[speaker]}
+</${speaker}_response>
 `;
+      }
     }
 
     evalMessage += `\n${prompt}`;
 
-    updateMutualStatus('sending', `正在发送给 ${capitalize(targetAI)}...`);
-    log(`[Mutual] Sending to ${targetAI}: ${otherAIs.join('+')} responses + prompt`);
-    await sendToAI(targetAI, evalMessage);
+    updateMutualStatus('sending', `正在发送给 ${capitalize(reviewer)}...`);
+    log(`[Mutual] 发送给 ${reviewer}: 评论 [${speakersToReview.join(', ')}] 的回复`);
+    await sendToAI(reviewer, evalMessage);
     sentCount++;
   }
 
-  updateMutualStatus('waiting', `等待所有 AI 完成评价...`);
-  updateMutualProgress(0, participants.length);
-  log(`[Mutual] Complete! All ${participants.length} AIs received cross-evaluations`, 'success');
+  updateMutualStatus('waiting', `等待所有评论者完成评价...`);
+  updateMutualProgress(0, reviewers.length);
+  log(`[Mutual] 完成！已向 ${reviewers.length} 个评论者发送评论请求`, 'success');
 }
 
-// Handle mutual review response
+// 处理互评回复
 function handleMutualReviewResponse(aiType, content) {
   if (!mutualReviewState.active) return;
-  if (!mutualReviewState.participants.includes(aiType)) return;
+  if (!mutualReviewState.reviewers.includes(aiType)) return;
 
   mutualReviewState.pendingEvaluations.delete(aiType);
-  
+
   const remaining = mutualReviewState.pendingEvaluations.size;
-  const total = mutualReviewState.participants.length;
+  const total = mutualReviewState.reviewers.length;
   const completed = total - remaining;
-  
+
   updateMutualProgress(completed, total);
-  
+
   if (remaining === 0) {
-    updateMutualStatus('complete', `互评完成！所有 ${total} 个 AI 已完成评价`);
+    updateMutualStatus('complete', `互评完成！所有 ${total} 个评论者已完成评价`);
     mutualReviewState.active = false;
     setTimeout(() => {
       updateMutualStatus('ready', '准备就绪');
@@ -988,7 +812,8 @@ function saveSelectedAIs() {
   const selected = {};
   AI_TYPES.forEach(aiType => {
     const checkbox = document.getElementById(`target-${aiType}`);
-    if (checkbox) {
+    // 只保存已连接AI的选中状态
+    if (checkbox && connectedTabs[aiType]) {
       selected[aiType] = checkbox.checked;
     }
   });
@@ -1005,9 +830,12 @@ async function restoreSelectedAIs() {
     const result = await chrome.storage.local.get(['selectedAIs']);
     if (result.selectedAIs) {
       AI_TYPES.forEach(aiType => {
-        const checkbox = document.getElementById(`target-${aiType}`);
-        if (checkbox && result.selectedAIs.hasOwnProperty(aiType)) {
-          checkbox.checked = result.selectedAIs[aiType];
+        // 只恢复已连接AI的选中状态
+        if (connectedTabs[aiType]) {
+          const checkbox = document.getElementById(`target-${aiType}`);
+          if (checkbox && result.selectedAIs.hasOwnProperty(aiType)) {
+            checkbox.checked = result.selectedAIs[aiType];
+          }
         }
       });
     }
@@ -1096,8 +924,8 @@ async function saveVisibleAIs() {
     log('设置已保存', 'success');
     
     // Apply settings immediately
-    applyVisibleAIs(visibleAIs);
-    
+    applyVisibleAIs(visibleAIs, true);
+
     // Close settings modal
     closeSettings();
   } catch (err) {
@@ -1117,72 +945,81 @@ async function loadAndApplyVisibleAIs() {
       aistudio: true
     };
     visibleAIsCache = visibleAIs;
-    applyVisibleAIs(visibleAIs);
+    applyVisibleAIs(visibleAIs, true); // 首次加载时设置默认选中状态
   } catch (err) {
     console.error('[AI Panel] Failed to load visible AIs:', err);
   }
 }
 
-function applyVisibleAIs(visibleAIs) {
+function applyVisibleAIs(visibleAIs, setDefaults = false) {
   AI_TYPES.forEach(aiType => {
-    const isVisible = visibleAIs[aiType] !== false; // Default to true if not set
-    
-    // Hide/show in normal mode targets (label wraps the input)
+    const isConnected = connectedTabs[aiType] !== null;
+    const isEnabled = visibleAIs[aiType] !== false; // Default to true if not set
+
+    // 普通模式：显示所有已连接的AI
     const checkbox = document.getElementById(`target-${aiType}`);
     if (checkbox) {
       const targetLabel = checkbox.closest('.target-label');
       if (targetLabel) {
-        targetLabel.style.display = isVisible ? '' : 'none';
+        // 只显示已连接的AI
+        targetLabel.style.display = isConnected ? '' : 'none';
+        // 首次加载时，默认选中配置中启用的AI
+        if (setDefaults && isConnected && isEnabled && !checkbox.checked) {
+          checkbox.checked = true;
+        }
       }
     }
 
-    // Hide/show in mention buttons (will be updated by updateMentionButtons)
-    // Don't update here, let updateMentionButtons handle it based on connection status
-
-    // Hide/show in discussion mode participants
+    // 讨论模式：只显示已连接的AI
     const participantOption = document.querySelector(`input[name="participant"][value="${aiType}"]`);
     if (participantOption) {
       const participantLabel = participantOption.closest('.participant-option');
       if (participantLabel) {
-        participantLabel.style.display = isVisible ? '' : 'none';
+        participantLabel.style.display = isConnected ? '' : 'none';
       }
     }
 
-    // If AI is hidden and currently selected, uncheck it
-    if (!isVisible) {
+    // 互评模式：只显示已连接的AI
+    const speakerCheckbox = document.querySelector(`#speaker-checkboxes input[value="${aiType}"]`);
+    if (speakerCheckbox) {
+      const roleCheckbox = speakerCheckbox.closest('.role-checkbox');
+      if (roleCheckbox) {
+        roleCheckbox.style.display = isConnected ? '' : 'none';
+      }
+    }
+
+    const reviewerCheckbox = document.querySelector(`#reviewer-checkboxes input[value="${aiType}"]`);
+    if (reviewerCheckbox) {
+      const roleCheckbox = reviewerCheckbox.closest('.role-checkbox');
+      if (roleCheckbox) {
+        roleCheckbox.style.display = isConnected ? '' : 'none';
+      }
+    }
+
+    // 如果AI未连接，取消选中
+    if (!isConnected) {
       if (checkbox && checkbox.checked) {
         checkbox.checked = false;
         saveSelectedAIs();
       }
-      
+
       if (participantOption && participantOption.checked) {
         participantOption.checked = false;
         validateParticipants();
       }
-    }
-  });
-  
-  // 更新@按钮显示（考虑连接状态和可见性）
-  updateMentionButtons();
-  
-  // 更新互评参与者列表
-  updateMutualParticipants();
-}
 
-// 更新@按钮显示：只显示已连接且可见的AI
-function updateMentionButtons() {
-  AI_TYPES.forEach(aiType => {
-    const mentionBtn = document.querySelector(`.mention-btn.${aiType}`);
-    if (mentionBtn) {
-      const isConnected = connectedTabs[aiType] !== null;
-      const isVisible = visibleAIsCache[aiType] !== false;
-      // 只显示已连接且可见的AI
-      mentionBtn.style.display = (isConnected && isVisible) ? '' : 'none';
+      if (speakerCheckbox && speakerCheckbox.checked) {
+        speakerCheckbox.checked = false;
+      }
+
+      if (reviewerCheckbox && reviewerCheckbox.checked) {
+        reviewerCheckbox.checked = false;
+      }
     }
   });
-  
-  // 同时更新互评参与者列表
-  updateMutualParticipants();
+
+  // 更新互评UI
+  updateMutualUI();
 }
 
 // ============================================
@@ -1217,8 +1054,8 @@ function setupMutualReview() {
   const header = document.querySelector('.mutual-review-header');
   const content = document.getElementById('mutual-review-content');
   const startBtn = document.getElementById('mutual-start-btn');
-  
-  // Toggle expand/collapse
+
+  // 切换展开/收起
   const toggleMutualPanel = () => {
     const isExpanded = !content.classList.contains('hidden');
     if (isExpanded) {
@@ -1229,11 +1066,10 @@ function setupMutualReview() {
       content.classList.remove('hidden');
       toggleBtn.textContent = '▲';
       toggleBtn.classList.add('expanded');
-      updateMutualParticipants();
-      checkAllResponseStatus();
+      updateMutualUI();
     }
   };
-  
+
   toggleBtn.addEventListener('click', toggleMutualPanel);
   if (header) {
     header.addEventListener('click', (e) => {
@@ -1242,129 +1078,131 @@ function setupMutualReview() {
       }
     });
   }
-  
-  // Start mutual review
+
+  // 角色选择复选框事件
+  setupRoleCheckboxListeners();
+
+  // 开始互评按钮
   startBtn.addEventListener('click', async () => {
-    const selectedAIs = AI_TYPES.filter(aiType => {
-      const checkbox = document.getElementById(`target-${aiType}`);
-      return checkbox && checkbox.checked;
+    await startMutualReview();
+  });
+
+  // 初始更新
+  updateMutualUI();
+}
+
+// 设置角色复选框监听器
+function setupRoleCheckboxListeners() {
+  const speakerCheckboxes = document.querySelectorAll('#speaker-checkboxes input[type="checkbox"]');
+  const reviewerCheckboxes = document.querySelectorAll('#reviewer-checkboxes input[type="checkbox"]');
+
+  [...speakerCheckboxes, ...reviewerCheckboxes].forEach(checkbox => {
+    checkbox.addEventListener('change', () => {
+      updateMutualUI();
     });
-    
-    if (selectedAIs.length < 2) {
-      updateMutualStatus('error', '至少需要选择 2 个 AI');
-      log('Mutual review requires at least 2 AIs selected', 'error');
-      return;
-    }
-    
-    // Check if all selected AIs have responses
-    const missingResponses = selectedAIs.filter(ai => !aiResponseStatus[ai]);
-    if (missingResponses.length > 0) {
-      updateMutualStatus('warning', `以下 AI 还没有回复：${missingResponses.map(capitalize).join(', ')}`);
-      log(`[Mutual] 警告：${missingResponses.join(', ')} 还没有回复`, 'error');
-    }
-    
-    const promptInput = document.getElementById('mutual-prompt-input');
-    const customPrompt = promptInput.value.trim();
-    const prompt = customPrompt || '请评价以上观点。你同意什么？不同意什么？有什么补充？';
-    
-    startBtn.disabled = true;
-    updateMutualStatus('processing', '正在执行互评...');
-    
-    try {
-      await handleMutualReview(selectedAIs, prompt);
-      updateMutualStatus('ready', '互评完成！');
-    } catch (err) {
-      updateMutualStatus('error', '互评失败：' + err.message);
-    } finally {
-      startBtn.disabled = false;
-    }
   });
-  
-  // Update when AI selection changes
-  AI_TYPES.forEach(aiType => {
-    const checkbox = document.getElementById(`target-${aiType}`);
-    if (checkbox) {
-      checkbox.addEventListener('change', () => {
-        updateMutualParticipants();
-        updateMutualStartButton();
-      });
-    }
-  });
-  
-  // Initial update
-  updateMutualParticipants();
-  updateMutualStartButton();
 }
 
-async function updateMutualParticipants() {
-  const container = document.getElementById('mutual-participants-list');
-  if (!container) return;
-  
-  const selectedAIs = AI_TYPES.filter(aiType => {
-    const checkbox = document.getElementById(`target-${aiType}`);
-    return checkbox && checkbox.checked;
-  });
-  
-  if (selectedAIs.length === 0) {
-    container.innerHTML = '';
-    return;
+// 设置视图切换监听器
+// 更新互评UI
+async function updateMutualUI() {
+  const speakers = getSelectedSpeakers();
+  const reviewers = getSelectedReviewers();
+
+  updateStartButtonState(speakers, reviewers);
+
+  // 检查发言者的回复状态
+  if (speakers.length > 0) {
+    await checkResponseStatus(speakers);
   }
-  
-  // Check response status for selected AIs
-  await checkResponseStatus(selectedAIs);
-  
-  let html = '';
-  selectedAIs.forEach(aiType => {
-    const isConnected = connectedTabs[aiType] !== null;
-    const hasResponse = aiResponseStatus[aiType];
-    const aiName = capitalize(aiType);
-    
-    html += `
-      <div class="mutual-participant-badge ${aiType}">
-        <span>${aiName}</span>
-        ${hasResponse ? '<span class="response-check">✓</span>' : '<span class="no-response">⚠</span>'}
-      </div>
-    `;
-  });
-  
-  container.innerHTML = html;
-  updateMutualStartButton();
 }
 
-function updateMutualStartButton() {
+// 获取选中的发言者
+function getSelectedSpeakers() {
+  const checkboxes = document.querySelectorAll('#speaker-checkboxes input[type="checkbox"]:checked');
+  return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// 更新开始按钮状态
+function updateStartButtonState(speakers, reviewers) {
   const startBtn = document.getElementById('mutual-start-btn');
-  if (!startBtn) return;
-  
-  const selectedAIs = AI_TYPES.filter(aiType => {
-    const checkbox = document.getElementById(`target-${aiType}`);
-    return checkbox && checkbox.checked;
-  });
-  
-  if (selectedAIs.length < 2) {
+
+  if (speakers.length === 0 || reviewers.length === 0) {
     startBtn.disabled = true;
-    updateMutualStatus('ready', '至少需要选择 2 个 AI');
+    updateMutualStatus('ready', '请选择发言者和评论者');
     return;
   }
-  
-  const allHaveResponse = selectedAIs.every(ai => aiResponseStatus[ai]);
-  if (!allHaveResponse) {
-    const missing = selectedAIs.filter(ai => !aiResponseStatus[ai]);
-    updateMutualStatus('warning', `部分 AI 还没有回复：${missing.map(capitalize).join(', ')}`);
-  } else {
-    updateMutualStatus('ready', '准备就绪，可以开始互评');
+
+  // 检查发言者是否都有回复
+  const missingResponses = speakers.filter(ai => !aiResponseStatus[ai]);
+  if (missingResponses.length > 0) {
+    startBtn.disabled = true;
+    updateMutualStatus('warning', `以下发言者还没有回复：${missingResponses.map(capitalize).join(', ')}`);
+    return;
   }
-  
+
   startBtn.disabled = false;
+  updateMutualStatus('ready', '准备就绪，可以开始互评');
 }
 
+// 开始互评
+async function startMutualReview() {
+  const speakers = getSelectedSpeakers();
+  const reviewers = getSelectedReviewers();
+
+  if (speakers.length === 0 || reviewers.length === 0) {
+    updateMutualStatus('error', '请先选择发言者和评论者');
+    return;
+  }
+
+  // 构建评论关系矩阵：默认使用"评论者→发言者"配置（排除自己）
+  const reviewMatrix = {};
+  reviewers.forEach(reviewer => {
+    reviewMatrix[reviewer] = speakers.filter(s => s !== reviewer);
+  });
+
+  // 检查是否有有效的评论关系
+  const hasValidRelations = Object.values(reviewMatrix).some(targets => targets.length > 0);
+  if (!hasValidRelations) {
+    updateMutualStatus('error', '请配置至少一个评论关系');
+    return;
+  }
+
+  // 获取提示词
+  const promptInput = document.getElementById('mutual-prompt-input');
+  const customPrompt = promptInput.value.trim();
+  const prompt = customPrompt || '请评价以上观点。你同意什么？不同意什么？有什么补充？';
+
+  const startBtn = document.getElementById('mutual-start-btn');
+  startBtn.disabled = true;
+  updateMutualStatus('processing', '正在执行互评...');
+
+  try {
+    await handleMutualReview(speakers, reviewers, reviewMatrix, prompt);
+    updateMutualStatus('complete', '互评完成！');
+  } catch (err) {
+    updateMutualStatus('error', '互评失败：' + err.message);
+    log(`[Mutual] 错误：${err.message}`, 'error');
+  } finally {
+    startBtn.disabled = false;
+  }
+}
+
+// 更新状态文本
 function updateMutualStatus(state, text) {
   const statusText = document.getElementById('mutual-status-text');
   if (!statusText) return;
-  
+
   statusText.textContent = text;
-  statusText.className = 'mutual-status-text ' + state;
+  statusText.className = 'mutual-status-text';
+
+  const statusContainer = document.getElementById('mutual-status');
+  if (statusContainer) {
+    statusContainer.className = 'mutual-status status-' + state;
+  }
 }
 
+// 检查回复状态
 async function checkResponseStatus(aiTypes) {
   for (const aiType of aiTypes) {
     try {
@@ -1374,45 +1212,15 @@ async function checkResponseStatus(aiTypes) {
       aiResponseStatus[aiType] = false;
     }
   }
-  updateResponseIndicators();
 }
 
-async function checkAllResponseStatus() {
-  const allAIs = AI_TYPES.filter(aiType => {
-    const checkbox = document.getElementById(`target-${aiType}`);
-    return checkbox && checkbox.checked;
-  });
-  if (allAIs.length > 0) {
-    await checkResponseStatus(allAIs);
-  }
-}
-
-function updateResponseIndicators() {
-  AI_TYPES.forEach(aiType => {
-    const indicator = document.getElementById(`response-indicator-${aiType}`);
-    if (indicator) {
-      if (aiResponseStatus[aiType]) {
-        indicator.classList.add('has-response');
-      } else {
-        indicator.classList.remove('has-response');
-      }
-    }
-  });
-}
-
+// 更新进度（简化版本，不需要进度条元素）
 function updateMutualProgress(current, total) {
-  const progressEl = document.getElementById('mutual-progress');
-  if (!progressEl) return;
-  
-  if (total === 0) {
-    progressEl.style.setProperty('--progress-width', '0%');
-    progressEl.textContent = '';
-    return;
+  // 如果需要显示进度，可以在状态文本中添加
+  if (total > 0) {
+    const percentage = Math.round((current / total) * 100);
+    // 可以在状态文本中添加进度信息
   }
-  
-  const percentage = (current / total) * 100;
-  progressEl.style.setProperty('--progress-width', `${percentage}%`);
-  progressEl.textContent = `${current}/${total}`;
 }
 
 // ============================================

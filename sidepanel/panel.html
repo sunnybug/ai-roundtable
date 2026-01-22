@@ -10,11 +10,14 @@
   <div class="container">
     <header>
       <div class="header-content">
-        <div>
-          <h1>AI 圆桌</h1>
-          <p class="subtitle">Multi-AI Roundtable</p>
-        </div>
-        <button class="settings-btn" id="settings-btn" title="设置">⚙️</button>
+        <h1>AI 圆桌</h1>
+        <button class="settings-btn" id="settings-btn" title="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6"></path>
+            <path d="m1 12 6-1m8 12 1-6M12 1l-1 6m12 8-6 1M1 12l1 6m6-12-6-1"></path>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -69,58 +72,95 @@
         <button class="mutual-toggle-btn" id="mutual-toggle-btn" title="展开/收起">▼</button>
       </div>
       <div class="mutual-review-content hidden" id="mutual-review-content">
-        <div class="mutual-participants" id="mutual-participants">
-          <p class="mutual-hint">参与互评的 AI：</p>
-          <div class="mutual-participants-list" id="mutual-participants-list">
-            <!-- 动态生成 -->
+
+        <!-- 步骤1：选择参与角色 -->
+        <div class="mutual-step-section">
+          <div class="mutual-role-selection">
+            <div class="role-column">
+              <div class="role-header">
+                <span class="role-icon">🗣️</span>
+                <span class="role-title">发言者（被评论）</span>
+              </div>
+              <div class="role-checkboxes" id="speaker-checkboxes">
+                <label class="role-checkbox">
+                  <input type="checkbox" value="claude" data-role="speaker">
+                  <span class="checkbox-label claude">Claude</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="chatgpt" data-role="speaker">
+                  <span class="checkbox-label chatgpt">ChatGPT</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="gemini" data-role="speaker">
+                  <span class="checkbox-label gemini">Gemini</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="chatglm" data-role="speaker">
+                  <span class="checkbox-label chatglm">ChatGLM</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="aistudio" data-role="speaker">
+                  <span class="checkbox-label aistudio">AI Studio</span>
+                </label>
+              </div>
+            </div>
+            <div class="role-column">
+              <div class="role-header">
+                <span class="role-icon">💬</span>
+                <span class="role-title">评论者</span>
+              </div>
+              <div class="role-checkboxes" id="reviewer-checkboxes">
+                <label class="role-checkbox">
+                  <input type="checkbox" value="claude" data-role="reviewer">
+                  <span class="checkbox-label claude">Claude</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="chatgpt" data-role="reviewer">
+                  <span class="checkbox-label chatgpt">ChatGPT</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="gemini" data-role="reviewer">
+                  <span class="checkbox-label gemini">Gemini</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="chatglm" data-role="reviewer">
+                  <span class="checkbox-label chatglm">ChatGLM</span>
+                </label>
+                <label class="role-checkbox">
+                  <input type="checkbox" value="aistudio" data-role="reviewer">
+                  <span class="checkbox-label aistudio">AI Studio</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- 提示词 -->
         <div class="mutual-prompt-section">
-          <label for="mutual-prompt-input">评价提示词（可选）：</label>
-          <input 
-            type="text" 
-            id="mutual-prompt-input" 
+          <label for="mutual-prompt-input">📝 评价提示词（可选）：</label>
+          <input
+            type="text"
+            id="mutual-prompt-input"
             placeholder="例如：重点分析优缺点、有什么值得借鉴的..."
             class="mutual-prompt-input"
           >
         </div>
+
+        <!-- 状态和开始按钮 -->
         <div class="mutual-status" id="mutual-status">
-          <div class="mutual-status-text" id="mutual-status-text">准备就绪</div>
+          <div class="mutual-status-text" id="mutual-status-text">请选择参与角色</div>
         </div>
         <button class="mutual-start-btn" id="mutual-start-btn" disabled>开始互评</button>
       </div>
     </section>
 
     <section class="input-section">
-      <div class="action-buttons">
-        <button class="shortcut-btn" id="cross-btn" data-insert="/cross ">/cross</button>
-        <button class="shortcut-btn" id="arrow-btn" data-insert=" <- "><-</button>
-      </div>
-      <div class="mention-buttons">
-        <span class="mention-label">@</span>
-        <button class="mention-btn claude" data-mention="@Claude">Claude</button>
-        <button class="mention-btn chatgpt" data-mention="@ChatGPT">ChatGPT</button>
-        <button class="mention-btn gemini" data-mention="@Gemini">Gemini</button>
-        <button class="mention-btn chatglm" data-mention="@ChatGLM">ChatGLM</button>
-        <button class="mention-btn aistudio" data-mention="@AIStudio">AI Studio</button>
-      </div>
       <textarea
         id="message-input"
-        placeholder="输入消息...&#10;&#10;单向: @Claude 评价一下 @ChatGPT"
+        placeholder="输入消息..."
         rows="6"
       ></textarea>
       <button id="send-btn">发送</button>
-    </section>
-
-    <section class="help">
-      <details>
-        <summary>命令帮助</summary>
-        <p class="help-subtitle">单向引用</p>
-        <ul>
-          <li><code>@Claude 评价一下 @ChatGPT</code></li>
-          <li><code>/cross @Claude @Gemini <- @ChatGPT</code></li>
-        </ul>
-      </details>
     </section>
     </div><!-- end normal-mode -->
 
@@ -243,14 +283,6 @@
       <h3>活动日志</h3>
       <div id="log-container"></div>
     </section>
-
-    <footer class="copyright">
-      <div>© AXTONLIU™ & AI 精英学院™</div>
-      <div class="build-info" id="build-info">
-        <span class="build-label">最后更新：</span>
-        <span class="build-time" id="build-time">-</span>
-      </div>
-    </footer>
   </div>
 
   <script src="panel.js"></script>

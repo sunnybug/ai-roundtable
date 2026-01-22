@@ -28,7 +28,7 @@ body {
   color: var(--text-secondary);
   min-width: 280px;
   height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .container {
@@ -36,7 +36,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
+  min-height: 100%;
   box-sizing: border-box;
 }
 
@@ -57,13 +57,7 @@ header h1 {
   font-weight: 600;
   color: var(--text-primary);
   text-align: center;
-}
-
-header .subtitle {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 4px;
-  text-align: center;
+  flex: 1;
 }
 
 .settings-btn {
@@ -71,7 +65,6 @@ header .subtitle {
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   color: var(--text-secondary);
-  font-size: 18px;
   width: 32px;
   height: 32px;
   cursor: pointer;
@@ -80,6 +73,11 @@ header .subtitle {
   align-items: center;
   justify-content: center;
   padding: 0;
+}
+
+.settings-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .settings-btn:hover {
@@ -234,6 +232,8 @@ header .subtitle {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .mutual-participants {
@@ -402,103 +402,7 @@ header .subtitle {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
-  min-height: 0;
-}
-
-/* Action & Shortcut Buttons Row */
-.action-buttons {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.shortcut-btn {
-  padding: 4px 10px;
-  border: 1px solid rgba(74, 250, 255, 0.3);
-  border-radius: 6px;
-  background: rgba(74, 250, 255, 0.1);
-  color: var(--electric-cyan);
-  font-size: 12px;
-  font-weight: 500;
-  font-family: 'Monaco', 'Consolas', monospace;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.shortcut-btn:hover {
-  background: rgba(74, 250, 255, 0.2);
-  border-color: var(--electric-cyan);
-}
-
-/* Mention Buttons */
-.mention-buttons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mention-label {
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.mention-btn {
-  padding: 4px 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  background: var(--dark-card);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.mention-btn:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.mention-btn.claude {
-  color: #d97706;
-}
-.mention-btn.claude:hover {
-  background: rgba(217, 119, 6, 0.15);
-  border-color: #d97706;
-}
-
-.mention-btn.chatgpt {
-  color: #10b981;
-}
-.mention-btn.chatgpt:hover {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: #10b981;
-}
-
-.mention-btn.gemini {
-  color: #3b82f6;
-}
-.mention-btn.gemini:hover {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: #3b82f6;
-}
-
-.mention-btn.chatglm {
-  color: #8b5cf6;
-}
-.mention-btn.chatglm:hover {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: #8b5cf6;
-}
-
-.mention-btn.aistudio {
-  color: #4285f4;
-}
-.mention-btn.aistudio:hover {
-  background: rgba(66, 133, 244, 0.15);
-  border-color: #4285f4;
+  flex-shrink: 0;
 }
 
 #message-input {
@@ -552,63 +456,6 @@ header .subtitle {
   cursor: not-allowed;
 }
 
-/* Help Section */
-.help {
-  font-size: 12px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.help summary {
-  cursor: pointer;
-  color: var(--electric-cyan);
-}
-
-.help ul {
-  margin-top: 8px;
-  padding-left: 20px;
-}
-
-.help li {
-  margin: 4px 0;
-}
-
-.help code {
-  background: var(--dark-card);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Monaco', 'Consolas', monospace;
-  font-size: 11px;
-}
-
-.help .syntax-title {
-  font-family: 'Monaco', 'Consolas', monospace;
-  font-size: 12px;
-  color: var(--electric-cyan);
-  margin: 8px 0;
-  padding: 6px 10px;
-  background: rgba(74, 250, 255, 0.1);
-  border-radius: 4px;
-  border: 1px solid rgba(74, 250, 255, 0.3);
-}
-
-.help .help-subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 10px 0 4px 0;
-  font-weight: 500;
-}
-
-.help .help-subtitle:first-of-type {
-  margin-top: 8px;
-}
-
-.help small {
-  color: var(--text-muted);
-  display: block;
-  margin-top: 2px;
-}
-
 /* Log Section */
 .log {
   border-top: 1px solid var(--border-subtle);
@@ -657,9 +504,8 @@ header .subtitle {
 #normal-mode {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 #discussion-mode {
@@ -1362,6 +1208,150 @@ header .subtitle {
   box-shadow: none;
   cursor: not-allowed;
   transform: none;
+}
+
+/* New Mutual Review UI Styles */
+.mutual-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mutual-icon {
+  font-size: 16px;
+}
+
+/* 步骤区域 */
+.mutual-step-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.mutual-step-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--electric-cyan), #3b82f6);
+  color: var(--deep-space-violet);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.step-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 角色选择区域 */
+.mutual-role-selection {
+  display: flex;
+  gap: 12px;
+}
+
+.role-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.role-icon {
+  font-size: 14px;
+}
+
+.role-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.role-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.role-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.role-checkbox:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--electric-cyan);
+}
+
+.role-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--electric-cyan);
+}
+
+.checkbox-label {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.checkbox-label.claude { color: #d97706; }
+.checkbox-label.chatgpt { color: #10b981; }
+.checkbox-label.gemini { color: #3b82f6; }
+.checkbox-label.chatglm { color: #8b5cf6; }
+.checkbox-label.aistudio { color: #f43f5e; }
+
+/* 隐藏类 */
+.hidden {
+  display: none !important;
+}
+
+/* 自定义滚动条 */
+.mutual-review-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mutual-review-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.mutual-review-content::-webkit-scrollbar-thumb {
+  background: rgba(74, 250, 255, 0.3);
+  border-radius: 3px;
+}
+
+.mutual-review-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 250, 255, 0.5);
 }
 
 /* Settings Modal */
