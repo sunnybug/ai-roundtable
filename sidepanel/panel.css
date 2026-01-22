@@ -140,7 +140,7 @@ header h1 {
 }
 
 .target-name.aistudio {
-  color: #4285f4;
+  color: #f43f5e;
 }
 
 .status {
@@ -171,6 +171,34 @@ header h1 {
 
 .response-indicator.has-response {
   opacity: 1;
+}
+
+.launch-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.launch-btn:hover {
+  border-color: var(--electric-cyan);
+  background: rgba(74, 250, 255, 0.1);
+  color: var(--electric-cyan);
+  transform: scale(1.1);
+}
+
+.launch-btn:active {
+  transform: scale(0.95);
 }
 
 /* Mutual Review Section */
@@ -289,9 +317,9 @@ header h1 {
 }
 
 .mutual-participant-badge.aistudio {
-  color: #4285f4;
-  border-color: rgba(66, 133, 244, 0.3);
-  background: rgba(66, 133, 244, 0.1);
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.3);
+  background: rgba(244, 63, 94, 0.1);
 }
 
 .mutual-participant-badge .response-check {
@@ -964,7 +992,7 @@ header h1 {
 #summary-content .ai-name.chatgpt { color: #10b981; }
 #summary-content .ai-name.gemini { color: #3b82f6; }
 #summary-content .ai-name.chatglm { color: #8b5cf6; }
-#summary-content .ai-name.aistudio { color: #4285f4; }
+#summary-content .ai-name.aistudio { color: #f43f5e; }
 
 #new-discussion-btn {
   width: 100%;

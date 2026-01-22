@@ -2,6 +2,15 @@
 
 const AI_TYPES = ['claude', 'chatgpt', 'gemini', 'chatglm', 'aistudio'];
 
+// AI URLs
+const AI_URLS = {
+  claude: 'https://claude.ai',
+  chatgpt: 'https://chatgpt.com',
+  gemini: 'https://gemini.google.com',
+  chatglm: 'https://chatglm.cn',
+  aistudio: 'https://aistudio.google.com'
+};
+
 // DOM Elements
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
@@ -68,6 +77,18 @@ function setupEventListeners() {
   if (moveTabsBtn) {
     moveTabsBtn.addEventListener('click', moveTabsToNewWindow);
   }
+
+  // 启动按钮事件监听
+  AI_TYPES.forEach(aiType => {
+    const launchBtn = document.getElementById(`launch-${aiType}`);
+    if (launchBtn) {
+      launchBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // 防止触发label的点击事件
+        launchAI(aiType);
+      });
+    }
+  });
 
   // Enter to send, Shift+Enter for new line (like ChatGPT)
   // But ignore Enter during IME composition (e.g., Chinese input)
@@ -957,35 +978,35 @@ function applyVisibleAIs(visibleAIs, setDefaults = false) {
     const isConnected = connectedTabs[aiType] !== null;
     const isEnabled = visibleAIs[aiType] !== false; // Default to true if not set
 
-    // 普通模式：显示所有已连接的AI
+    // 普通模式：根据visibleAIs配置显示AI，无论是否连接
     const checkbox = document.getElementById(`target-${aiType}`);
     if (checkbox) {
       const targetLabel = checkbox.closest('.target-label');
       if (targetLabel) {
-        // 只显示已连接的AI
-        targetLabel.style.display = isConnected ? '' : 'none';
-        // 首次加载时，默认选中配置中启用的AI
+        // 根据visibleAIs配置决定是否显示，未连接也显示
+        targetLabel.style.display = isEnabled ? '' : 'none';
+        // 首次加载时，默认选中配置中启用的AI（如果已连接）
         if (setDefaults && isConnected && isEnabled && !checkbox.checked) {
           checkbox.checked = true;
         }
       }
     }
 
-    // 讨论模式：只显示已连接的AI
+    // 讨论模式：根据visibleAIs配置显示AI，无论是否连接
     const participantOption = document.querySelector(`input[name="participant"][value="${aiType}"]`);
     if (participantOption) {
       const participantLabel = participantOption.closest('.participant-option');
       if (participantLabel) {
-        participantLabel.style.display = isConnected ? '' : 'none';
+        participantLabel.style.display = isEnabled ? '' : 'none';
       }
     }
 
-    // 互评模式：只显示已连接的AI
+    // 互评模式：根据visibleAIs配置显示AI，无论是否连接
     const speakerCheckbox = document.querySelector(`#speaker-checkboxes input[value="${aiType}"]`);
     if (speakerCheckbox) {
       const roleCheckbox = speakerCheckbox.closest('.role-checkbox');
       if (roleCheckbox) {
-        roleCheckbox.style.display = isConnected ? '' : 'none';
+        roleCheckbox.style.display = isEnabled ? '' : 'none';
       }
     }
 
@@ -993,7 +1014,7 @@ function applyVisibleAIs(visibleAIs, setDefaults = false) {
     if (reviewerCheckbox) {
       const roleCheckbox = reviewerCheckbox.closest('.role-checkbox');
       if (roleCheckbox) {
-        roleCheckbox.style.display = isConnected ? '' : 'none';
+        roleCheckbox.style.display = isEnabled ? '' : 'none';
       }
     }
 
@@ -1121,6 +1142,12 @@ async function updateMutualUI() {
 // 获取选中的发言者
 function getSelectedSpeakers() {
   const checkboxes = document.querySelectorAll('#speaker-checkboxes input[type="checkbox"]:checked');
+  return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// 获取选中的评论者
+function getSelectedReviewers() {
+  const checkboxes = document.querySelectorAll('#reviewer-checkboxes input[type="checkbox"]:checked');
   return Array.from(checkboxes).map(cb => cb.value);
 }
 
@@ -1275,6 +1302,41 @@ async function displayBuildTime() {
 }
 
 // ============================================
+// Launch AI Website
+// ============================================
+
+async function launchAI(aiType) {
+  try {
+    const url = AI_URLS[aiType];
+    if (!url) {
+      log(`未知的AI类型: ${aiType}`, 'error');
+      return;
+    }
+
+    // 检查是否已经打开了该AI的标签页
+    const tabs = await chrome.tabs.query({});
+    const existingTab = tabs.find(tab => {
+      const tabAIType = getAITypeFromUrl(tab.url);
+      return tabAIType === aiType;
+    });
+
+    if (existingTab) {
+      // 如果已存在，切换到该标签页
+      await chrome.tabs.update(existingTab.id, { active: true });
+      await chrome.windows.update(existingTab.windowId, { focused: true });
+      log(`已切换到 ${capitalize(aiType)} 标签页`, 'success');
+    } else {
+      // 如果不存在，创建新标签页
+      await chrome.tabs.create({ url: url, active: true });
+      log(`正在打开 ${capitalize(aiType)}...`, 'success');
+    }
+  } catch (err) {
+    log(`打开 ${capitalize(aiType)} 失败: ${err.message}`, 'error');
+    console.error('[Launch AI] Error:', err);
+  }
+}
+
+// ============================================
 // Move Tabs to New Window
 // ============================================
 
@@ -1294,6 +1356,16 @@ async function moveTabsToNewWindow() {
 
     if (selectedTabIds.length === 0) {
       log('没有选中的已连接AI标签', 'error');
+      return;
+    }
+
+    // 检查所有选中的标签页是否已经在同一个窗口中
+    const allTabs = await chrome.tabs.query({});
+    const selectedTabs = allTabs.filter(tab => selectedTabIds.includes(tab.id));
+    const windowIds = new Set(selectedTabs.map(tab => tab.windowId));
+    
+    if (windowIds.size === 1) {
+      log('所有选中的AI标签已经在同一个窗口中，无需移动', 'info');
       return;
     }
 
